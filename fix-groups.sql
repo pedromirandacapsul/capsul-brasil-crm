@@ -1,0 +1,1 @@
+UPDATE "WhatsAppConversation" SET "isGroup" = true WHERE "contactNumber" LIKE '%@g.us';

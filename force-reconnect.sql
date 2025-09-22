@@ -1,0 +1,1 @@
+UPDATE "WhatsAppAccount" SET "status" = 'DISCONNECTED', "qrCode" = NULL, "sessionData" = NULL WHERE "id" = 'cmfn3ltpx0001oql7yi5ds8bo';

@@ -1,0 +1,868 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite doesn't support enums, using strings with constraints
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("SALES") // ADMIN, MANAGER, SALES
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Existing relations
+  ownedLeads   Lead[]     @relation("LeadOwner")
+  activities   Activity[]
+  assignedTasks Task[]    @relation("TaskAssignee")
+  createdTasks Task[]     @relation("TaskCreator")
+  auditLogs    AuditLog[]
+
+  // New relations
+  messageTemplates       MessageTemplate[]
+  conversations          Conversation[]
+  sentMessages           Message[]
+  workflows              Workflow[]
+  calendarEvents         CalendarEvent[]
+  chatRooms              ChatRoom[]
+  chatParticipants       ChatParticipant[]
+  chatMessages           ChatMessage[]
+  emailCampaigns         EmailCampaign[]
+  salesCelebrations      SalesCelebration[]
+  whatsappAccounts       WhatsAppAccount[]
+  whatsappConversations  WhatsAppConversation[]
+  whatsappMessages       WhatsAppMessage[]
+  whatsappTemplates      WhatsAppTemplate[]
+  messageFlows           MessageFlow[]
+  tagAssignments         LeadTagAssignment[]
+  ownedOpportunities     Opportunity[]      @relation("OpportunityOwner")
+  stageChanges           StageHistory[]     @relation("StageChanger")
+  revenueTargets         RevenueTarget[]    @relation("UserRevenueTargets")
+
+  @@map("users")
+}
+
+model Lead {
+  id              String     @id @default(cuid())
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  roleTitle       String?
+  interest        String?
+  notes           String?
+  source          String?
+  sourceDetails   String?    // NEW: Subcategoria da origem (Meta Ads, Google Ads, etc)
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmTerm         String?
+  utmContent      String?
+  referrer        String?
+  consentLGPD     Boolean    @default(false)
+  status          String     @default("NEW") // NEW, NOT_ANSWERED_1, NOT_ANSWERED_2, CONTACTED, QUALIFIED, PROPOSAL, WON, LOST
+  score           Int        @default(0)
+  ownerId         String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  firstContactAt  DateTime?
+  lastActivityAt  DateTime?
+  lastInteractionAt DateTime? // NEW: Última ligação, WhatsApp ou email
+  lastInteractionType String? // NEW: CALL, WHATSAPP, EMAIL
+  nextActionAt    DateTime?  // NEW: Data/hora da próxima ação agendada
+  nextActionType  String?    // NEW: Tipo da próxima ação (CALL, WHATSAPP, EMAIL, MEETING)
+  nextActionNotes String?    // NEW: Observações sobre a próxima ação
+  lossReason      String?    // NEW: Motivo da perda/desqualificação
+  lossDetails     String?    // NEW: Detalhes do motivo da perda
+
+  // New fields for advanced features
+  dealValue       Float?     @default(0)
+  probability     Float?     @default(0)
+  stageEnteredAt  DateTime?
+  conversionValue Float?     @default(0)
+  adCampaignId    String?
+  conversionTracked Boolean  @default(false)
+
+  // Existing relations
+  owner      User?      @relation("LeadOwner", fields: [ownerId], references: [id])
+  activities Activity[]
+  tasks      Task[]
+
+  // New relations
+  conversations          Conversation[]
+  workflowExecutions     WorkflowExecution[]
+  calendarEvents         CalendarEvent[]
+  chatRooms              ChatRoom[]
+  campaignRecipients     CampaignRecipient[]
+  salesCelebrations      SalesCelebration[]
+  whatsappConversations  WhatsAppConversation[]
+  tagAssignments         LeadTagAssignment[]
+  opportunities          Opportunity[]
+
+  @@map("leads")
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  leadId    String
+  userId    String
+  type      String       // CREATED, CONTACTED, EMAIL_SENT, CALL_MADE, etc.
+  payload   String?
+  createdAt DateTime     @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("activities")
+}
+
+model Task {
+  id            String     @id @default(cuid())
+  leadId        String
+  opportunityId String?    // opcional - permite vincular tarefa a oportunidade
+  assigneeId    String
+  creatorId     String
+  title         String
+  description   String?
+  dueAt         DateTime?
+  status        String     @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  priority      String     @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  category      String     @default("GENERAL") // CALL, WHATSAPP, EMAIL, MEETING, DOCUMENT, GENERAL
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt @default(now())
+  completedAt   DateTime?
+  statusChangedAt DateTime @default(now())
+
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  opportunity Opportunity? @relation("OpportunityTasks", fields: [opportunityId], references: [id], onDelete: SetNull)
+  assignee    User         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator     User         @relation("TaskCreator", fields: [creatorId], references: [id])
+
+  // Relação com subtarefas
+  subtasks TaskSubitem[]
+
+  @@map("tasks")
+}
+
+model TaskSubitem {
+  id          String   @id @default(cuid())
+  taskId      String
+  title       String
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_subitems")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String
+  resourceId String?
+  oldValues String?
+  newValues String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model WebhookEvent {
+  id        String   @id @default(cuid())
+  type      String
+  payload   String
+  processed Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  processedAt DateTime?
+
+  @@map("webhook_events")
+}
+
+model TeamKPI {
+  id          String   @id @default(cuid())
+  date        DateTime
+  metric      String
+  value       Float
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@unique([date, metric])
+  @@map("team_kpis")
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  event      String
+  properties String?
+  userId     String?
+  sessionId  String?
+  createdAt  DateTime @default(now())
+
+  @@map("analytics_events")
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  enabled     Boolean  @default(false)
+  config      String?  // JSON string for additional configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("feature_flags")
+}
+
+// 1. Lead Scoring Rules
+model LeadScoringRule {
+  id             String   @id @default(cuid())
+  name           String
+  conditionType  String   // 'source', 'utm', 'activity', 'field'
+  conditionValue String
+  points         Int
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("lead_scoring_rules")
+}
+
+// 2. Pipeline Stages
+model PipelineStage {
+  id          String   @id @default(cuid())
+  name        String
+  position    Int
+  probability Float    @default(0) // % de fechamento
+  color       String   @default("#3B82F6")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("pipeline_stages")
+}
+
+// 3. Message Templates
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // 'whatsapp', 'email'
+  subject     String?  // só para email
+  content     String
+  variables   String?  // JSON array de variáveis disponíveis
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  emailCampaigns EmailCampaign[]
+
+  @@map("message_templates")
+}
+
+// 4. Conversations
+model Conversation {
+  id             String   @id @default(cuid())
+  leadId         String
+  type           String   // 'whatsapp', 'email'
+  status         String   @default("OPEN") // 'OPEN', 'CLOSED', 'PENDING'
+  assigneeId     String?
+  lastMessageAt  DateTime?
+  createdAt      DateTime @default(now())
+
+  lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignee User?     @relation(fields: [assigneeId], references: [id])
+  messages Message[]
+
+  @@map("conversations")
+}
+
+// 5. Messages
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  type           String   // 'incoming', 'outgoing'
+  content        String
+  metadata       String?  // JSON attachments, read status, etc
+  sentById       String?  // user_id if outgoing
+  sentAt         DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sentBy       User?        @relation(fields: [sentById], references: [id])
+
+  @@map("messages")
+}
+
+// 6. Workflows
+model Workflow {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  triggerType   String   // 'lead_created', 'status_changed', 'time_based'
+  triggerConfig String?  // JSON
+  active        Boolean  @default(true)
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  createdBy  User                @relation(fields: [createdById], references: [id])
+  steps      WorkflowStep[]
+  executions WorkflowExecution[]
+
+  @@map("workflows")
+}
+
+// 7. Workflow Steps
+model WorkflowStep {
+  id         String @id @default(cuid())
+  workflowId String
+  stepType   String // 'send_email', 'send_whatsapp', 'delay', 'condition'
+  stepConfig String // JSON
+  position   Int
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_steps")
+}
+
+// 8. Workflow Executions
+model WorkflowExecution {
+  id            String    @id @default(cuid())
+  workflowId    String
+  leadId        String
+  currentStepId String?
+  status        String    @default("RUNNING") // 'RUNNING', 'COMPLETED', 'FAILED', 'PAUSED'
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  workflow Workflow @relation(fields: [workflowId], references: [id])
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_executions")
+}
+
+// 9. Calendar Events
+model CalendarEvent {
+  id             String   @id @default(cuid())
+  leadId         String
+  title          String
+  description    String?
+  startTime      DateTime
+  endTime        DateTime
+  attendeeEmails String?  // JSON
+  googleMeetLink String?
+  googleEventId  String?
+  status         String   @default("SCHEDULED") // 'SCHEDULED', 'COMPLETED', 'CANCELLED'
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  lead      Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@map("calendar_events")
+}
+
+// 10. Heatmap Sessions
+model HeatmapSession {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  pageUrl   String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  events HeatmapEvent[]
+
+  @@map("heatmap_sessions")
+}
+
+// 11. Heatmap Events
+model HeatmapEvent {
+  id              String   @id @default(cuid())
+  sessionId       String
+  eventType       String   // 'click', 'move', 'scroll'
+  xPosition       Int?
+  yPosition       Int?
+  elementSelector String?
+  timestamp       DateTime @default(now())
+
+  session HeatmapSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  @@map("heatmap_events")
+}
+
+// 12. Chat Rooms
+model ChatRoom {
+  id          String   @id @default(cuid())
+  name        String?
+  type        String   // 'direct', 'group', 'lead_discussion'
+  leadId      String?  // se for discussão sobre lead específico
+  createdById String
+  createdAt   DateTime @default(now())
+
+  lead         Lead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@map("chat_rooms")
+}
+
+// 13. Chat Participants
+model ChatParticipant {
+  roomId     String
+  userId     String
+  joinedAt   DateTime  @default(now())
+  lastReadAt DateTime?
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+  @@map("chat_participants")
+}
+
+// 14. Chat Messages
+model ChatMessage {
+  id          String   @id @default(cuid())
+  roomId      String
+  userId      String
+  content     String
+  messageType String   @default("text") // 'text', 'image', 'file'
+  mentions    String?  // JSON array de user_ids mencionados
+  replyTo     String?  // id da mensagem que está respondendo
+  sentAt      DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id])
+
+  @@map("chat_messages")
+}
+
+// 15. Email Campaigns
+model EmailCampaign {
+  id           String    @id @default(cuid())
+  name         String
+  subject      String
+  content      String
+  templateId   String?
+  status       String    @default("DRAFT") // 'DRAFT', 'SCHEDULED', 'SENDING', 'SENT'
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  createdById  String
+  createdAt    DateTime  @default(now())
+
+  template   MessageTemplate?    @relation(fields: [templateId], references: [id])
+  createdBy  User                @relation(fields: [createdById], references: [id])
+  recipients CampaignRecipient[]
+
+  @@map("email_campaigns")
+}
+
+// 16. Campaign Recipients
+model CampaignRecipient {
+  id         String    @id @default(cuid())
+  campaignId String
+  leadId     String
+  status     String    @default("PENDING") // 'PENDING', 'SENT', 'DELIVERED', 'OPENED', 'CLICKED', 'FAILED'
+  sentAt     DateTime?
+  openedAt   DateTime?
+  clickedAt  DateTime?
+
+  campaign EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("campaign_recipients")
+}
+
+// 17. Sales Celebrations
+model SalesCelebration {
+  id               String    @id @default(cuid())
+  leadId           String
+  sellerId         String
+  dealValue        Float
+  celebrationToken String    @unique
+  gameCompleted    Boolean   @default(false)
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+
+  lead   Lead @relation(fields: [leadId], references: [id])
+  seller User @relation(fields: [sellerId], references: [id])
+
+  @@map("sales_celebrations")
+}
+
+// WhatsApp Integration Models
+model WhatsAppAccount {
+  id                String              @id @default(cuid())
+  userId            String
+  phoneNumber       String              @unique
+  displayName       String?
+  profilePicture    String?
+  qrCode            String?             // QR code para conexão
+  status            String              @default("DISCONNECTED") // DISCONNECTED, CONNECTING, CONNECTED, ERROR
+  sessionData       String?             // JSON com dados da sessão
+  isBusinessApi     Boolean             @default(false)
+  businessApiToken  String?
+  webhookVerifyToken String?
+  lastHeartbeat     DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations WhatsAppConversation[]
+  messages     WhatsAppMessage[]
+  flowExecutions FlowExecution[]
+  campaignMessages CampaignMessage[]
+  audioGenerations AudioGeneration[]
+
+  @@map("whatsapp_accounts")
+}
+
+model WhatsAppConversation {
+  id               String   @id @default(cuid())
+  accountId        String
+  contactNumber    String   // Número do contato
+  contactName      String?  // Nome do contato
+  profilePicture   String?  // URL ou base64 da foto de perfil
+  isGroup          Boolean  @default(false) // Indica se é um grupo
+  leadId           String?  // Lead associado
+  status           String   @default("ACTIVE") // ACTIVE, ARCHIVED, BLOCKED
+  lastMessageAt    DateTime?
+  unreadCount      Int      @default(0)
+  assignedUserId   String?  // Usuário responsável pela conversa
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  account       WhatsAppAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  lead          Lead?             @relation(fields: [leadId], references: [id])
+  assignedUser  User?             @relation(fields: [assignedUserId], references: [id])
+  messages      WhatsAppMessage[]
+  flowExecutions FlowExecution[]
+  contactTags   ContactTag[]
+
+  @@unique([accountId, contactNumber])
+  @@map("whatsapp_conversations")
+}
+
+model WhatsAppMessage {
+  id             String   @id @default(cuid())
+  accountId      String
+  conversationId String
+  whatsappId     String?  // ID único da mensagem no WhatsApp
+  direction      String   // INBOUND, OUTBOUND
+  messageType    String   // TEXT, IMAGE, AUDIO, VIDEO, DOCUMENT, LOCATION, CONTACT
+  content        String?  // Texto da mensagem
+  mediaUrl       String?  // URL do arquivo de mídia
+  mediaType      String?  // image/jpeg, audio/ogg, etc
+  mediaSize      Int?     // Tamanho do arquivo em bytes
+  caption        String?  // Legenda para mídia
+  quotedMessageId String? // ID da mensagem citada
+  status         String   @default("PENDING") // PENDING, SENT, DELIVERED, READ, FAILED
+  fromNumber     String   // Número que enviou
+  toNumber       String   // Número que recebeu
+  timestamp      DateTime
+  sentById       String?  // ID do usuário que enviou (se outbound)
+  createdAt      DateTime @default(now())
+
+  account      WhatsAppAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sentBy       User?                @relation(fields: [sentById], references: [id])
+
+  @@map("whatsapp_messages")
+}
+
+model WhatsAppTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  category     String   // MARKETING, UTILITY, AUTHENTICATION
+  language     String   @default("pt_BR")
+  content      String   // Template com variáveis {{1}}, {{2}}
+  headerType   String?  // TEXT, IMAGE, VIDEO, DOCUMENT
+  headerContent String? // Conteúdo do cabeçalho
+  footerText   String?  // Texto do rodapé
+  buttons      String?  // JSON com botões
+  variables    String?  // JSON com descrição das variáveis
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  whatsappId   String?  // ID do template no WhatsApp Business API
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@map("whatsapp_templates")
+}
+
+model WhatsAppWebhook {
+  id            String   @id @default(cuid())
+  event         String   // message, status, etc
+  payload       String   // JSON completo do webhook
+  processed     Boolean  @default(false)
+  processedAt   DateTime?
+  errorMessage  String?
+  attempts      Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@map("whatsapp_webhooks")
+}
+
+// Message Flow Automation Models
+model MessageFlow {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  description  String?
+  isActive     Boolean  @default(true)
+  triggerType  String   // KEYWORD, NEW_CONTACT, TIME_BASED, MANUAL
+  triggerValue String?  // keyword or time expression
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps      FlowStep[]
+  executions FlowExecution[]
+  triggers   FlowTrigger[]
+
+  @@unique([userId, name])
+  @@map("message_flows")
+}
+
+model FlowStep {
+  id           String   @id @default(cuid())
+  flowId       String
+  stepOrder    Int
+  stepType     String   // MESSAGE, DELAY, CONDITION, ACTION
+  messageType  String?  // TEXT, AUDIO, IMAGE, VIDEO, DOCUMENT
+  content      String?
+  mediaUrl     String?
+  delayMinutes Int      @default(0)
+  conditions   String?  // JSON for conditional logic
+  actions      String?  // JSON for actions like tags, assignments
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  flow            MessageFlow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  currentExecutions FlowExecution[] @relation("CurrentStep")
+
+  @@index([flowId, stepOrder])
+  @@map("flow_steps")
+}
+
+model FlowExecution {
+  id             String    @id @default(cuid())
+  flowId         String
+  conversationId String
+  accountId      String
+  currentStepId  String?
+  status         String    @default("RUNNING") // RUNNING, COMPLETED, PAUSED, FAILED
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  data           String?   // JSON for execution context
+
+  flow         MessageFlow          @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  account      WhatsAppAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  currentStep  FlowStep?            @relation("CurrentStep", fields: [currentStepId], references: [id])
+
+  @@index([conversationId, status])
+  @@map("flow_executions")
+}
+
+model FlowTrigger {
+  id           String   @id @default(cuid())
+  flowId       String
+  triggerType  String
+  name         String
+  triggerValue String?
+  isActive     Boolean  @default(true)
+  config       String?  // JSON string for trigger configuration
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  flow MessageFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@index([triggerType, triggerValue])
+  @@map("flow_triggers")
+}
+
+model CampaignMessage {
+  id             String    @id @default(cuid())
+  accountId      String
+  campaignName   String
+  messageType    String    // TEXT, AUDIO, IMAGE, VIDEO
+  content        String?
+  mediaUrl       String?
+  targetAudience String?   // JSON for filtering criteria
+  scheduledAt    DateTime?
+  status         String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, COMPLETED, FAILED
+  sentCount      Int       @default(0)
+  deliveredCount Int       @default(0)
+  readCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  account WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("campaign_messages")
+}
+
+model ContactTag {
+  id             String   @id @default(cuid())
+  conversationId String
+  tag            String
+  createdAt      DateTime @default(now())
+
+  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, tag])
+  @@index([conversationId, tag])
+  @@map("contact_tags")
+}
+
+model AudioGeneration {
+  id          String    @id @default(cuid())
+  accountId   String
+  text        String
+  voice       String    @default("pt-BR-Wavenet-A")
+  audioUrl    String?
+  duration    Int?
+  status      String    @default("PENDING") // PENDING, GENERATING, COMPLETED, FAILED
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  account WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("audio_generations")
+}
+
+// Lead Tags System
+model LeadTag {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  color      String   @default("#3B82F6")
+  category   String?  // e.g., "source", "interest", "priority"
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  leadTags   LeadTagAssignment[]
+
+  @@map("lead_tags")
+}
+
+model LeadTagAssignment {
+  id       String   @id @default(cuid())
+  leadId   String
+  tagId    String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag      LeadTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assigner User?    @relation(fields: [assignedBy], references: [id])
+
+  @@unique([leadId, tagId])
+  @@index([leadId])
+  @@index([tagId])
+  @@map("lead_tag_assignments")
+}
+
+// ===== OPPORTUNITIES / DEALS SYSTEM =====
+
+model Opportunity {
+  id                String    @id @default(cuid())
+  leadId            String
+  ownerId           String
+  stage             String    @default("NEW") // NEW, QUALIFICATION, DISCOVERY, PROPOSAL, NEGOTIATION, WON, LOST
+  amountBr          Float?    // nullable até PROPOSAL; obrigatório a partir de PROPOSAL
+  currency          String    @default("BRL")
+  probability       Int       @default(0) // 0..100, auto por etapa mas editável por gestor
+  expectedCloseAt   DateTime?
+  discountPct       Float?    // percentual de desconto
+  costEstimatedBr   Float?    // custo estimado
+  lostReason        String?   // obrigatório quando stage = LOST
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  closedAt          DateTime? // quando WON
+
+  lead          Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  owner         User                @relation("OpportunityOwner", fields: [ownerId], references: [id])
+  items         OpportunityItem[]
+  stageHistory  StageHistory[]
+  tasks         Task[]              @relation("OpportunityTasks")
+
+  @@index([leadId])
+  @@index([ownerId])
+  @@index([stage])
+  @@index([expectedCloseAt])
+  @@map("opportunities")
+}
+
+model OpportunityItem {
+  id            String  @id @default(cuid())
+  opportunityId String
+  productName   String
+  qty           Int     @default(1)
+  unitPriceBr   Float
+  subtotalBr    Float   // computed or persisted
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+  @@map("opportunity_items")
+}
+
+model StageHistory {
+  id            String   @id @default(cuid())
+  opportunityId String
+  stageFrom     String?  // null se inicial
+  stageTo       String
+  changedBy     String
+  changedAt     DateTime @default(now())
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  user        User        @relation("StageChanger", fields: [changedBy], references: [id])
+
+  @@index([opportunityId])
+  @@index([changedAt])
+  @@map("stage_history")
+}
+
+model StageProbability {
+  id          String @id @default(cuid())
+  stage       String @unique
+  probability Int    // 0..100
+
+  @@map("stage_probabilities")
+}
+
+model RevenueTarget {
+  id          String   @id @default(cuid())
+  year        Int
+  month       Int
+  targetValue Float    // Meta de receita para o mês
+  userId      String?  // null = meta geral, preenchido = meta individual
+  teamId      String?  // para metas de equipe (futuro)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User? @relation("UserRevenueTargets", fields: [userId], references: [id])
+
+  @@unique([year, month, userId])
+  @@index([year, month])
+  @@map("revenue_targets")
+}
