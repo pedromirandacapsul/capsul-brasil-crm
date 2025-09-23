@@ -25,10 +25,14 @@ import {
   MessageCircle,
   Zap,
   DollarSign,
+  Bot,
+  PieChart,
+  FileText,
 } from 'lucide-react'
 import { hasPermission, PERMISSIONS, canAccessRoute } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
 import { WhatsAppNotifications } from '@/components/whatsapp-notifications'
+import { PerformanceAlerts } from '@/components/alerts/performance-alerts'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -40,6 +44,18 @@ const navigation = [
     href: '/admin',
     icon: Home,
     permission: PERMISSIONS.LEADS_VIEW,
+  },
+  {
+    name: 'Dashboard Executivo',
+    href: '/admin/dashboard/executive',
+    icon: PieChart,
+    permission: PERMISSIONS.ANALYTICS_VIEW,
+  },
+  {
+    name: 'Relatórios',
+    href: '/admin/reports/users',
+    icon: FileText,
+    permission: PERMISSIONS.ANALYTICS_VIEW,
   },
   {
     name: 'Leads',
@@ -143,6 +159,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const filteredNavigation = navigation.filter(item =>
     hasPermission(userRole, item.permission)
   )
+
+  // Debug: log navigation items
+  console.log('🔍 Menu Debug:', {
+    userRole,
+    totalItems: navigation.length,
+    filteredItems: filteredNavigation.length,
+    filtered: filteredNavigation.map(item => item.name)
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -289,6 +313,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Alertas de Performance (Fixed Position) */}
+      <PerformanceAlerts
+        position="fixed"
+        refreshInterval={30000}
+        maxAlerts={3}
+      />
     </div>
   )
 }

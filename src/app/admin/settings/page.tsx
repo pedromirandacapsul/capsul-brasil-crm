@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
+  Bot,
 } from 'lucide-react'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
 
@@ -136,6 +137,24 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Quick Access to Automation */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-blue-900 flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                Configurações de Automação
+              </h3>
+              <p className="text-sm text-blue-700">Configure triggers automáticos, notificações e fluxos de trabalho</p>
+            </div>
+            <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
+              <a href="/admin/settings/automation">Configurar</a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Alert */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
@@ -143,9 +162,8 @@ export default function SettingsPage() {
           <div>
             <h3 className="font-medium text-blue-900">Configurações em Desenvolvimento</h3>
             <p className="text-blue-800 text-sm mt-1">
-              Esta página está em desenvolvimento. As configurações mostradas são exemplos
-              e não afetam o sistema atual. A funcionalidade completa será implementada em
-              versões futuras.
+              ✅ <strong>Automação:</strong> Totalmente funcional com triggers dinâmicos e notificações<br/>
+              ⚠️ <strong>Outras configurações:</strong> Em desenvolvimento - funcionalidade completa será implementada em versões futuras.
             </p>
           </div>
         </div>

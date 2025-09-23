@@ -23,8 +23,13 @@ import {
   MessageCircle,
   Zap,
   DollarSign,
+  PieChart,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { GuidedTour } from '@/components/tour/guided-tour'
+import { WelcomeOnboarding } from '@/components/tour/welcome-onboarding'
+import { MenuItemHelp } from '@/components/tour/menu-item-help'
 
 interface AdminLayoutSimpleProps {
   children: React.ReactNode
@@ -35,6 +40,16 @@ const navigation = [
     name: 'Dashboard',
     href: '/admin',
     icon: Home,
+  },
+  {
+    name: 'Dashboard Executivo',
+    href: '/admin/dashboard/executive',
+    icon: PieChart,
+  },
+  {
+    name: 'Relatórios',
+    href: '/admin/reports/users',
+    icon: FileText,
   },
   {
     name: 'Leads',
@@ -106,20 +121,21 @@ export function AdminLayoutSimple({ children }: AdminLayoutSimpleProps) {
           </div>
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                  pathname === item.href
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                )}
-              >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
-              </Link>
+              <MenuItemHelp key={item.name} itemName={item.name}>
+                <Link
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors w-full',
+                    pathname === item.href
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  )}
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  {item.name}
+                </Link>
+              </MenuItemHelp>
             ))}
           </nav>
         </div>
@@ -135,19 +151,20 @@ export function AdminLayoutSimple({ children }: AdminLayoutSimpleProps) {
           </div>
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                  pathname === item.href
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                )}
-              >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
-              </Link>
+              <MenuItemHelp key={item.name} itemName={item.name}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors w-full',
+                    pathname === item.href
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  )}
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  {item.name}
+                </Link>
+              </MenuItemHelp>
             ))}
           </nav>
           <div className="p-4 border-t">
@@ -164,6 +181,12 @@ export function AdminLayoutSimple({ children }: AdminLayoutSimpleProps) {
                 </p>
               </div>
             </div>
+
+            {/* Botão do Tour Guiado */}
+            <div className="mb-3">
+              <GuidedTour />
+            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -217,6 +240,9 @@ export function AdminLayoutSimple({ children }: AdminLayoutSimpleProps) {
           {children}
         </main>
       </div>
+
+      {/* Welcome Onboarding para novos usuários */}
+      <WelcomeOnboarding userName={session?.user?.name} />
     </div>
   )
 }

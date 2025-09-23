@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PipelineService } from '@/lib/pipeline'
+import { SimplePipelineService } from '@/lib/simple-pipeline'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
 
 export async function GET(request: Request) {
@@ -20,19 +21,39 @@ export async function GET(request: Request) {
 
     switch (action) {
       case 'stages':
-        const stages = await PipelineService.getStages()
-        return NextResponse.json({
-          success: true,
-          data: stages,
-        })
+        // Usar serviço simplificado primeiro, fallback para avançado
+        try {
+          const stages = await PipelineService.getStages()
+          return NextResponse.json({
+            success: true,
+            data: stages,
+          })
+        } catch (error) {
+          // Se falhar (feature flag desabilitada), usar versão simplificada
+          const stages = await SimplePipelineService.getStages()
+          return NextResponse.json({
+            success: true,
+            data: stages,
+          })
+        }
 
       case 'analytics':
         const timeframe = searchParams.get('timeframe') as '30d' | '90d' | '1y' || '30d'
-        const analytics = await PipelineService.getAnalytics(timeframe)
-        return NextResponse.json({
-          success: true,
-          data: analytics,
-        })
+        // Usar serviço simplificado primeiro, fallback para avançado
+        try {
+          const analytics = await PipelineService.getAnalytics(timeframe)
+          return NextResponse.json({
+            success: true,
+            data: analytics,
+          })
+        } catch (error) {
+          // Se falhar (feature flag desabilitada), usar versão simplificada
+          const analytics = await SimplePipelineService.getAnalytics(timeframe)
+          return NextResponse.json({
+            success: true,
+            data: analytics,
+          })
+        }
 
       default:
         return NextResponse.json(

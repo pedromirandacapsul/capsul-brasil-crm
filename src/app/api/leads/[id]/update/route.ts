@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { simpleOpportunityAutomation } from '@/services/simple-opportunity-automation'
+import { automationConfig } from '@/services/automation-config'
 
 export async function PATCH(
   request: NextRequest,
@@ -11,8 +12,8 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions)
 
-    // TEMPORÁRIO: Bypass de autenticação para testes
-    const skipAuth = true
+    // Controle de bypass via variável de ambiente (para desenvolvimento)
+    const skipAuth = process.env.SKIP_AUTH_IN_DEVELOPMENT === 'true'
 
     if (!session && !skipAuth) {
       return NextResponse.json(
@@ -36,6 +37,7 @@ export async function PATCH(
       'lossDetails',
       'sourceDetails',
       'dealValue'  // Campo correto do schema
+      // Nota: 'amount' NÃO é um campo do Lead, apenas passamos para automação
     ]
 
     const updateData: any = {}
@@ -45,6 +47,11 @@ export async function PATCH(
       if (allowedFields.includes(key)) {
         updateData[key] = value
       }
+    }
+
+    // Garantir que 'amount' não seja incluído no updateData (não é campo do Lead)
+    if ('amount' in updateData) {
+      delete updateData.amount
     }
 
     // Sempre atualizar o updatedAt
@@ -117,24 +124,31 @@ export async function PATCH(
       }
     }
 
-    // Auto-criar Oportunidade usando o serviço de automação simples
-    if (updateData.status && userId && ['QUALIFIED', 'PROPOSAL', 'WON', 'LOST'].includes(updateData.status)) {
-      console.log(`🚀 Triggering automation for lead ${id}:`, {
-        status: updateData.status,
-        userId,
-        amount: body.amount,
-        bodyData: body
-      })
-      try {
-        await simpleOpportunityAutomation.createOpportunityFromLead(
-          id,
-          updateData.status,
+    // ✅ NOVO: Auto-criar Oportunidade usando configuração dinâmica
+    if (updateData.status && userId) {
+      const shouldTrigger = automationConfig.shouldCreateOpportunity(updateData.status)
+      console.log(`🔍 Checking automation trigger for status ${updateData.status}: ${shouldTrigger ? 'YES' : 'NO'}`)
+
+      if (shouldTrigger) {
+        console.log(`🚀 Triggering automation for lead ${id}:`, {
+          status: updateData.status,
           userId,
-          body.dealValue || body.amount
-        )
-      } catch (opportunityError) {
-        // Log o erro mas não falhe a atualização do lead
-        console.warn('Failed to auto-create opportunity:', opportunityError)
+          amount: body.amount || body.dealValue,
+          bodyData: body
+        })
+        try {
+          await simpleOpportunityAutomation.createOpportunityFromLead(
+            id,
+            updateData.status,
+            userId,
+            body.dealValue || body.amount
+          )
+        } catch (opportunityError) {
+          // Log o erro mas não falhe a atualização do lead
+          console.warn('Failed to auto-create opportunity:', opportunityError)
+        }
+      } else {
+        console.log(`⏭️  Status ${updateData.status} não configurado para automação - pulando`)
       }
     }
 

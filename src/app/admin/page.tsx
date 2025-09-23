@@ -278,6 +278,56 @@ export default function AdminDashboard() {
           <a href="/admin/analytics" className="text-blue-600 underline">Acesse a página de Analytics</a> para visualizações completas.
         </p>
       </div>
+
+      {/* LINKS DE TESTE - NOVOS RELATÓRIOS FASE 5 */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="text-blue-800 font-semibold mb-2">🎉 NOVOS RELATÓRIOS AVANÇADOS - FASE 5</h3>
+        <div className="space-y-2">
+          <div>
+            <a href="/admin/dashboard/executive" className="text-blue-600 underline font-medium">
+              📊 Dashboard Executivo
+            </a>
+            <span className="text-blue-700 text-sm ml-2">- KPIs principais, alertas e análise completa</span>
+          </div>
+          <div>
+            <a href="/admin/reports/users" className="text-blue-600 underline font-medium">
+              📋 Relatórios de Performance
+            </a>
+            <span className="text-blue-700 text-sm ml-2">- Performance por usuário com ranking e exportação</span>
+          </div>
+        </div>
+        <p className="text-blue-700 text-xs mt-2">
+          ✨ Estes links também devem aparecer no menu lateral esquerdo!
+        </p>
+      </div>
+
+      {/* Tour e Onboarding */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h3 className="text-green-800 font-semibold mb-2">🚀 SISTEMA DE AJUDA COMPLETO</h3>
+        <div className="space-y-2">
+          <p className="text-green-700 text-sm">
+            • <strong>Tour Guiado:</strong> Clique em "Guia do Sistema" no menu lateral esquerdo
+          </p>
+          <p className="text-green-700 text-sm">
+            • <strong>Ajuda por Item:</strong> Passe o mouse sobre os itens do menu para ver tooltips
+          </p>
+          <p className="text-green-700 text-sm">
+            • <strong>Ajuda Detalhada:</strong> Clique no ícone ❓ que aparece ao lado de cada item do menu
+          </p>
+          <p className="text-green-700 text-sm">
+            • <strong>Onboarding:</strong> Aparece automaticamente para novos usuários
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('hasSeenOnboarding')
+              window.location.reload()
+            }}
+            className="mt-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+          >
+            🔄 Testar Onboarding (Reset)
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -27,7 +27,7 @@ import { DollarSign, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react
 import { useToast } from '@/hooks/use-toast'
 
 const opportunitySchema = z.object({
-  status: z.enum(['QUALIFIED', 'PROPOSAL', 'WON', 'LOST'], {
+  status: z.enum(['CONTACTED', 'INTERESTED', 'QUALIFIED', 'PROPOSAL', 'WON', 'LOST'], {
     required_error: "Status é obrigatório para criar oportunidade"
   }),
   amount: z.number().optional(),
@@ -58,6 +58,8 @@ interface SendToOpportunitiesModalProps {
 }
 
 const statusLabels = {
+  'CONTACTED': 'Contatado',
+  'INTERESTED': 'Interessado',
   'QUALIFIED': 'Qualificado',
   'PROPOSAL': 'Proposta',
   'WON': 'Ganho',
@@ -65,6 +67,8 @@ const statusLabels = {
 }
 
 const statusDescriptions = {
+  'CONTACTED': 'Lead foi contatado e pode virar oportunidade',
+  'INTERESTED': 'Lead demonstrou interesse no produto/serviço',
   'QUALIFIED': 'Lead qualificado pronto para virar oportunidade',
   'PROPOSAL': 'Proposta enviada (requer valor)',
   'WON': 'Negócio fechado com sucesso',
@@ -124,6 +128,8 @@ export function SendToOpportunitiesModal({
 
       if (result.success) {
         const statusMessages = {
+          'CONTACTED': `Lead ${leadName} foi contatado e convertido em oportunidade!`,
+          'INTERESTED': `Lead ${leadName} demonstrou interesse e está no pipeline!`,
           'QUALIFIED': `Lead ${leadName} foi qualificado e está agora no pipeline de oportunidades!`,
           'PROPOSAL': `Proposta criada para ${leadName} com valor de R$ ${data.amount?.toLocaleString('pt-BR') || '0'}!`,
           'WON': `🎉 Parabéns! Negócio fechado com ${leadName}!`,

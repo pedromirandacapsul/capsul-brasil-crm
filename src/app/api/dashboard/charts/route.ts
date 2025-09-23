@@ -7,8 +7,8 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    // TEMPORÁRIO: Bypass de autenticação para testes
-    const skipAuth = true
+    // Controle de bypass via variável de ambiente (para desenvolvimento)
+    const skipAuth = process.env.SKIP_AUTH_IN_DEVELOPMENT === 'true'
 
     if (!session && !skipAuth) {
       return NextResponse.json(
