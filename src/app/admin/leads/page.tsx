@@ -44,7 +44,8 @@ import {
   Target,
   TrendingUp,
   Activity,
-  BarChart3
+  BarChart3,
+  DollarSign
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { AnimatedMetricCard } from '@/components/dashboard/animated-metric-card'
@@ -53,6 +54,7 @@ import { AnimatedChartContainer } from '@/components/dashboard/animated-chart-co
 import { EnhancedScheduleFollowUpModal } from '@/components/forms/enhanced-schedule-followup-modal'
 import { EnhancedDisqualifyLeadModal } from '@/components/forms/enhanced-disqualify-lead-modal'
 import { EnhancedSendToKanbanModal } from '@/components/forms/enhanced-send-to-kanban-modal'
+import { SendToOpportunitiesModal } from '@/components/forms/send-to-opportunities-modal'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { TagSelector, TagManager } from '@/components/leads/tag-selector'
 import { Tag } from '@/components/ui/tag'
@@ -826,6 +828,18 @@ export default function LeadsPage() {
                                   <ArrowRight className="h-4 w-4 text-orange-600" />
                                 </Button>
                               </EnhancedSendToKanbanModal>
+
+                              {/* Enviar para Oportunidades */}
+                              <SendToOpportunitiesModal
+                                leadId={lead.id}
+                                leadName={lead.name}
+                                currentStatus={lead.status}
+                                onOpportunityCreated={handleActionCompleted}
+                              >
+                                <Button variant="ghost" size="sm" title="Criar oportunidade">
+                                  <DollarSign className="h-4 w-4 text-green-600" />
+                                </Button>
+                              </SendToOpportunitiesModal>
 
                               {/* Desqualificar */}
                               <EnhancedDisqualifyLeadModal

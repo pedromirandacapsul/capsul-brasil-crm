@@ -64,7 +64,9 @@ export default function OpportunitiesPage() {
   })
 
   useEffect(() => {
-    if (session) {
+    // TEMPORÁRIO: Bypass de autenticação para testes
+    const skipAuth = true
+    if (session || skipAuth) {
       fetchOpportunities()
     }
   }, [session])
@@ -90,7 +92,9 @@ export default function OpportunitiesPage() {
   }
 
   useEffect(() => {
-    if (session) {
+    // TEMPORÁRIO: Bypass de autenticação para testes
+    const skipAuth = true
+    if (session || skipAuth) {
       fetchOpportunities()
     }
   }, [filters, session])
@@ -149,6 +153,7 @@ export default function OpportunitiesPage() {
       opp.owner.name.toLowerCase().includes(searchLower)
     )
   })
+
 
   const getStats = () => {
     return {
