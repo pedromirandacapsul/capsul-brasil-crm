@@ -118,7 +118,7 @@ export async function PATCH(
     }
 
     // Auto-criar Oportunidade usando o serviço de automação simples
-    if (updateData.status && userId && ['QUALIFIED', 'PROPOSAL', 'WON'].includes(updateData.status)) {
+    if (updateData.status && userId && ['QUALIFIED', 'PROPOSAL', 'WON', 'LOST'].includes(updateData.status)) {
       console.log(`🚀 Triggering automation for lead ${id}:`, {
         status: updateData.status,
         userId,

@@ -27,7 +27,7 @@ import { DollarSign, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react
 import { useToast } from '@/hooks/use-toast'
 
 const opportunitySchema = z.object({
-  status: z.enum(['QUALIFIED', 'PROPOSAL', 'WON'], {
+  status: z.enum(['QUALIFIED', 'PROPOSAL', 'WON', 'LOST'], {
     required_error: "Status é obrigatório para criar oportunidade"
   }),
   amount: z.number().optional(),
@@ -60,13 +60,15 @@ interface SendToOpportunitiesModalProps {
 const statusLabels = {
   'QUALIFIED': 'Qualificado',
   'PROPOSAL': 'Proposta',
-  'WON': 'Ganho'
+  'WON': 'Ganho',
+  'LOST': 'Perdido'
 }
 
 const statusDescriptions = {
   'QUALIFIED': 'Lead qualificado pronto para virar oportunidade',
   'PROPOSAL': 'Proposta enviada (requer valor)',
-  'WON': 'Negócio fechado com sucesso'
+  'WON': 'Negócio fechado com sucesso',
+  'LOST': 'Oportunidade perdida (requer motivo)'
 }
 
 export function SendToOpportunitiesModal({
@@ -121,9 +123,24 @@ export function SendToOpportunitiesModal({
       const result = await updateResponse.json()
 
       if (result.success) {
+        const statusMessages = {
+          'QUALIFIED': `Lead ${leadName} foi qualificado e está agora no pipeline de oportunidades!`,
+          'PROPOSAL': `Proposta criada para ${leadName} com valor de R$ ${data.amount?.toLocaleString('pt-BR') || '0'}!`,
+          'WON': `🎉 Parabéns! Negócio fechado com ${leadName}!`,
+          'LOST': `Oportunidade marcada como perdida. Motivo: ${data.lossReason || 'Não especificado'}`
+        }
+
         toast({
-          title: "✅ Oportunidade criada!",
-          description: `Lead ${leadName} foi convertido em oportunidade com sucesso.`,
+          title: "✅ Oportunidade atualizada!",
+          description: statusMessages[data.status] || `Lead ${leadName} foi convertido em oportunidade com sucesso.`,
+          action: (
+            <button
+              onClick={() => window.open('/admin/opportunities', '_blank')}
+              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+            >
+              Ver Pipeline
+            </button>
+          )
         })
 
         setOpen(false)
