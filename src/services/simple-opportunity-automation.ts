@@ -16,8 +16,61 @@ export class SimpleOpportunityAutomation {
       })
 
       if (existingOpportunity) {
-        console.log(`Opportunity already exists for lead ${leadId}`)
-        return existingOpportunity
+        console.log(`Opportunity already exists for lead ${leadId}, updating with new data`)
+
+        // Mapear status para stage
+        const stageMapping: Record<LeadStatus, OpportunityStage> = {
+          'QUALIFIED': 'QUALIFICATION',
+          'PROPOSAL': 'PROPOSAL',
+          'WON': 'WON',
+          'NEW': 'NEW',
+          'CONTACTED': 'NEW',
+          'INTERESTED': 'DISCOVERY',
+          'LOST': 'LOST'
+        }
+
+        const stage = stageMapping[status] || 'NEW'
+        const probabilityMapping: Record<OpportunityStage, number> = {
+          'NEW': 10,
+          'QUALIFICATION': 25,
+          'DISCOVERY': 40,
+          'PROPOSAL': 60,
+          'NEGOTIATION': 80,
+          'WON': 100,
+          'LOST': 0
+        }
+        const probability = probabilityMapping[stage] || 10
+
+        // Atualizar oportunidade existente
+        const updatedOpportunity = await prisma.opportunity.update({
+          where: { id: existingOpportunity.id },
+          data: {
+            stage,
+            probability,
+            ...(amount && { amountBr: amount }),
+            ...(stage === 'WON' && { closedAt: new Date() }),
+            ...(stage === 'LOST' && { closedAt: new Date() })
+          }
+        })
+
+        // Criar histórico de mudança de estágio se necessário
+        if (existingOpportunity.stage !== stage) {
+          try {
+            await prisma.stageHistory.create({
+              data: {
+                opportunityId: existingOpportunity.id,
+                stageFrom: existingOpportunity.stage,
+                stageTo: stage,
+                changedBy: userId
+              }
+            })
+          } catch (historyError) {
+            console.warn('Failed to create stage history:', historyError)
+          }
+        }
+
+        console.log(`Updated opportunity ${existingOpportunity.id} with stage ${stage} and amount ${amount}`)
+        return updatedOpportunity
       }
 
       // Mapear status para stage

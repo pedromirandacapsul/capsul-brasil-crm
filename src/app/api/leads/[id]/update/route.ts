@@ -35,8 +35,7 @@ export async function PATCH(
       'lossReason',
       'lossDetails',
       'sourceDetails',
-      'amount',
-      'amountBr'
+      'dealValue'  // Campo correto do schema
     ]
 
     const updateData: any = {}
@@ -131,7 +130,7 @@ export async function PATCH(
           id,
           updateData.status,
           userId,
-          body.amount || body.amountBr
+          body.dealValue || body.amount
         )
       } catch (opportunityError) {
         // Log o erro mas não falhe a atualização do lead

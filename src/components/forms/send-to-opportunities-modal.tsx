@@ -108,7 +108,7 @@ export function SendToOpportunitiesModal({
         },
         body: JSON.stringify({
           status: data.status,
-          amount: data.amount,
+          dealValue: data.amount,  // Mapear amount para dealValue
           lossReason: data.lossReason,
           lossDetails: data.lossDetails
         }),
