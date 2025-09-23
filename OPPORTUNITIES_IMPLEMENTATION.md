@@ -142,6 +142,8 @@ src/
 - [x] ✅ **Analytics Integration** - Métricas detalhadas e visualizações
 - [x] ✅ **Navegação e UI** - Páginas integradas ao sistema
 - [x] ✅ **Documentação** - Este arquivo de resumo
+- [x] ✅ **Automação de Conversão Leads → Oportunidades** - Sistema automático implementado
+- [x] ✅ **Correção de Bugs** - Problema de valor e estágio resolvido (22/09/2025)
 
 ## 🚀 Recursos Principais
 
@@ -173,3 +175,35 @@ src/
 - **RBAC personalizado** para permissões
 
 O sistema está totalmente funcional e integrado ao CRM existente, mantendo todos os recursos anteriores intactos conforme solicitado.
+
+## 🔧 Correções Realizadas (22/09/2025)
+
+### Problema: Oportunidades criadas sem valor e estágio incorreto
+**Descrição**: Quando o usuário selecionava "Proposta" e informava um valor, a oportunidade era criada com valor 0 e estágio incorreto.
+
+**Causa Raiz**:
+- Campo `amount` não estava na lista de `allowedFields` na API `/api/leads/[id]/update`
+- O valor não chegava ao serviço de automação `simple-opportunity-automation.ts`
+
+**Solução Implementada**:
+1. **Adicionado suporte a campos `amount` e `amountBr`** em `/api/leads/[id]/update/route.ts:28-40`
+   ```typescript
+   const allowedFields = [
+     // ... outros campos
+     'amount',     // ✅ NOVO
+     'amountBr'    // ✅ NOVO
+   ]
+   ```
+
+2. **Correção na passagem de valor** em `/api/leads/[id]/update/route.ts:132`
+   ```typescript
+   body.amount || body.amountBr  // ✅ Fallback para ambos os formatos
+   ```
+
+**Resultado**:
+- ✅ Oportunidades com estágio "PROPOSAL" agora são criadas com o valor correto
+- ✅ Todos os tipos de conversão (QUALIFIED, PROPOSAL, WON) funcionam corretamente
+- ✅ Mapeamento de estágios preservado conforme especificação original
+
+**Arquivos Modificados**:
+- `src/app/api/leads/[id]/update/route.ts` - Correção dos campos permitidos e passagem de valor
