@@ -164,6 +164,32 @@ const menuItemsData: Record<string, MenuItemData> = {
     ],
     route: '/admin/opportunities'
   },
+  'Email Marketing': {
+    name: 'Email Marketing',
+    description: 'Sistema completo de campanhas de email marketing com automação e métricas avançadas',
+    quickTip: 'Crie campanhas, templates e monitore performance de emails',
+    features: [
+      'Criação e gestão de templates personalizáveis',
+      'Campanhas segmentadas por critérios avançados',
+      'Automação de envios baseada em triggers',
+      'Métricas detalhadas de abertura e cliques',
+      'Sistema de tracking em tempo real',
+      'Integração completa com leads do CRM'
+    ],
+    useCases: [
+      'Nutrição de leads com conteúdo relevante',
+      'Campanhas promocionais e newsletters',
+      'Follow-up automatizado pós-venda',
+      'Reativação de leads inativos'
+    ],
+    tips: [
+      'Segmente campanhas para maior efetividade',
+      'Teste diferentes assuntos para melhor abertura',
+      'Use templates para padronizar comunicação',
+      'Monitore métricas para otimizar resultados'
+    ],
+    route: '/admin/email-marketing'
+  },
   'Pipeline': {
     name: 'Pipeline de Vendas',
     description: 'Análise visual do funil de vendas com métricas de conversão',

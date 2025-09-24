@@ -34,6 +34,12 @@ export const PERMISSIONS = {
   ANALYTICS_EXPORT: 'analytics.export',
   ANALYTICS_MANAGE: 'analytics.manage',
 
+  // Email Marketing permissions
+  EMAIL_MARKETING: 'email.marketing',
+  EMAIL_TEMPLATES: 'email.templates',
+  EMAIL_CAMPAIGNS: 'email.campaigns',
+  EMAIL_ANALYTICS: 'email.analytics',
+
   // System permissions
   SYSTEM_ADMIN: 'system.admin',
   AUDIT_VIEW: 'audit.view',
@@ -67,6 +73,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.ANALYTICS_VIEW,
     PERMISSIONS.ANALYTICS_EXPORT,
     PERMISSIONS.ANALYTICS_MANAGE,
+    PERMISSIONS.EMAIL_MARKETING,
+    PERMISSIONS.EMAIL_TEMPLATES,
+    PERMISSIONS.EMAIL_CAMPAIGNS,
+    PERMISSIONS.EMAIL_ANALYTICS,
     PERMISSIONS.SYSTEM_ADMIN,
     PERMISSIONS.AUDIT_VIEW,
   ],
@@ -90,6 +100,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.ANALYTICS_VIEW,
     PERMISSIONS.ANALYTICS_EXPORT,
     PERMISSIONS.ANALYTICS_MANAGE,
+    PERMISSIONS.EMAIL_MARKETING,
+    PERMISSIONS.EMAIL_TEMPLATES,
+    PERMISSIONS.EMAIL_CAMPAIGNS,
+    PERMISSIONS.EMAIL_ANALYTICS,
   ],
   SALES: [
     // Sales can view and update leads, manage their own tasks and opportunities
@@ -102,6 +116,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.OPPORTUNITIES_CREATE,
     PERMISSIONS.OPPORTUNITIES_EDIT,
     PERMISSIONS.ANALYTICS_VIEW, // Can view basic analytics
+    PERMISSIONS.EMAIL_MARKETING, // Can view email marketing
   ],
 }
 

@@ -29,7 +29,8 @@ import {
   Settings,
   Star,
   Target,
-  TrendingUp
+  TrendingUp,
+  Mail
 } from 'lucide-react'
 
 interface TourStep {
@@ -143,6 +144,27 @@ const tourSteps: TourStep[] = [
     tips: [
       'Mantenha valores e datas atualizados',
       'Use probabilidades para previsões precisas'
+    ]
+  },
+  {
+    id: 'email-marketing',
+    title: 'Email Marketing',
+    description: 'Sistema completo de campanhas e automação de email',
+    icon: Mail,
+    route: '/admin/email-marketing',
+    features: [
+      'Criação e gestão de templates de email',
+      'Campanhas de marketing segmentadas',
+      'Automação de envios baseada em triggers',
+      'Métricas de abertura, cliques e conversões',
+      'Segmentação avançada de leads',
+      'Rastreamento de performance em tempo real'
+    ],
+    tips: [
+      'Use templates para padronizar comunicação',
+      'Segmente campanhas para maior efetividade',
+      'Monitore métricas para otimizar resultados',
+      'Teste diferentes assuntos para melhor abertura'
     ]
   },
   {

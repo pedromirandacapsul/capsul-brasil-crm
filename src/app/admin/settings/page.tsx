@@ -35,6 +35,13 @@ import {
   CheckCircle,
   Info,
   Bot,
+  TestTube,
+  XCircle,
+  Eye,
+  EyeOff,
+  HelpCircle,
+  Zap,
+  Loader2,
 } from 'lucide-react'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
 
@@ -50,11 +57,22 @@ export default function SettingsPage() {
   const [language, setLanguage] = useState('pt-BR')
 
   // Email Settings
-  const [emailProvider, setEmailProvider] = useState('smtp')
+  const [emailProvider, setEmailProvider] = useState('mailhog')
   const [smtpHost, setSmtpHost] = useState('localhost')
   const [smtpPort, setSmtpPort] = useState('1025')
   const [smtpUser, setSmtpUser] = useState('')
   const [smtpPassword, setSmtpPassword] = useState('')
+  const [smtpSecure, setSmtpSecure] = useState(false)
+  const [smtpFrom, setSmtpFrom] = useState('noreply@capsul.com.br')
+  const [smtpFromName, setSmtpFromName] = useState('Capsul Brasil CRM')
+  const [sendgridApiKey, setSendgridApiKey] = useState('')
+  const [awsRegion, setAwsRegion] = useState('us-east-1')
+  const [awsSesAccessKey, setAwsSesAccessKey] = useState('')
+  const [awsSesSecretKey, setAwsSesSecretKey] = useState('')
+  const [testEmail, setTestEmail] = useState('')
+  const [testLoading, setTestLoading] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Notification Settings
   const [emailNotifications, setEmailNotifications] = useState(true)
@@ -76,7 +94,25 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setLoading(true)
     try {
-      // Simulate save operation
+      // Simular salvamento das configurações
+      const emailSettings = {
+        provider: emailProvider,
+        host: smtpHost,
+        port: smtpPort,
+        user: smtpUser,
+        password: smtpPassword,
+        secure: smtpSecure,
+        from: smtpFrom,
+        fromName: smtpFromName,
+        sendgridApiKey: sendgridApiKey,
+        awsRegion: awsRegion,
+        awsSesAccessKey: awsSesAccessKey,
+        awsSesSecretKey: awsSesSecretKey
+      }
+
+      // Em uma implementação real, você salvaria no banco de dados
+      console.log('Salvando configurações de email:', emailSettings)
+
       await new Promise(resolve => setTimeout(resolve, 1000))
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
@@ -84,6 +120,36 @@ export default function SettingsPage() {
       console.error('Error saving settings:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleTestEmail = async () => {
+    if (!testEmail) return
+
+    setTestLoading(true)
+    setTestResult(null)
+
+    try {
+      const response = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: testEmail }),
+      })
+
+      const data = await response.json()
+      setTestResult({
+        success: data.success,
+        message: data.success ? data.message : data.error
+      })
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: 'Erro ao realizar teste'
+      })
+    } finally {
+      setTestLoading(false)
     }
   }
 
@@ -243,86 +309,480 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="email">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Mail className="h-5 w-5" />
-                <span>Configurações de Email</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email-provider">Provedor de Email</Label>
-                <Select value={emailProvider} onValueChange={setEmailProvider}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="smtp">SMTP Personalizado</SelectItem>
-                    <SelectItem value="mailhog">MailHog (Desenvolvimento)</SelectItem>
-                    <SelectItem value="gmail">Gmail</SelectItem>
-                    <SelectItem value="sendgrid">SendGrid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Configuração Principal */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Mail className="h-5 w-5" />
+                  <span>Configurações de Email</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Provedor de Email */}
                 <div className="space-y-2">
-                  <Label htmlFor="smtp-host">Servidor SMTP</Label>
-                  <Input
-                    id="smtp-host"
-                    value={smtpHost}
-                    onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="smtp.gmail.com"
-                  />
+                  <Label htmlFor="email-provider">Provedor de Email</Label>
+                  <Select value={emailProvider} onValueChange={setEmailProvider}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mailhog">MailHog (Desenvolvimento)</SelectItem>
+                      <SelectItem value="ses">Amazon SES SMTP</SelectItem>
+                      <SelectItem value="ses-api">Amazon SES API (Avançado)</SelectItem>
+                      <SelectItem value="gmail">Gmail</SelectItem>
+                      <SelectItem value="sendgrid">SendGrid</SelectItem>
+                      <SelectItem value="custom">SMTP Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="smtp-port">Porta SMTP</Label>
-                  <Input
-                    id="smtp-port"
-                    value={smtpPort}
-                    onChange={(e) => setSmtpPort(e.target.value)}
-                    placeholder="587"
-                  />
-                </div>
+                {/* Informações do Remetente */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-from">Email do Remetente</Label>
+                    <Input
+                      id="smtp-from"
+                      value={smtpFrom}
+                      onChange={(e) => setSmtpFrom(e.target.value)}
+                      placeholder="noreply@suaempresa.com"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="smtp-user">Usuário SMTP</Label>
-                  <Input
-                    id="smtp-user"
-                    value={smtpUser}
-                    onChange={(e) => setSmtpUser(e.target.value)}
-                    placeholder="usuario@email.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="smtp-password">Senha SMTP</Label>
-                  <Input
-                    id="smtp-password"
-                    type="password"
-                    value={smtpPassword}
-                    onChange={(e) => setSmtpPassword(e.target.value)}
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-yellow-900">MailHog Configurado</h4>
-                    <p className="text-yellow-800 text-sm mt-1">
-                      O sistema está configurado para usar MailHog em desenvolvimento.
-                      Acesse http://localhost:8025 para ver os emails enviados.
-                    </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-from-name">Nome do Remetente</Label>
+                    <Input
+                      id="smtp-from-name"
+                      value={smtpFromName}
+                      onChange={(e) => setSmtpFromName(e.target.value)}
+                      placeholder="Sua Empresa CRM"
+                    />
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Configurações específicas por provedor */}
+                {emailProvider === 'gmail' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                    <h4 className="font-medium text-blue-900 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Configuração Gmail
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gmail-user">Email do Gmail</Label>
+                        <Input
+                          id="gmail-user"
+                          value={smtpUser}
+                          onChange={(e) => setSmtpUser(e.target.value)}
+                          placeholder="seuemail@gmail.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gmail-password">Senha de App</Label>
+                        <div className="relative">
+                          <Input
+                            id="gmail-password"
+                            type={showPassword ? "text" : "password"}
+                            value={smtpPassword}
+                            onChange={(e) => setSmtpPassword(e.target.value)}
+                            placeholder="••••••••••••••••"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-blue-700">
+                      <p><strong>⚠️ Importante:</strong> Use uma "Senha de App", não sua senha normal do Gmail.</p>
+                      <p><strong>📖 Como criar:</strong> <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener noreferrer" className="underline">Guia do Google</a></p>
+                    </div>
+                  </div>
+                )}
+
+                {emailProvider === 'ses' && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-4">
+                    <h4 className="font-medium text-orange-900 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Configuração Amazon SES (SMTP)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="aws-region">Região AWS</Label>
+                        <Select value={awsRegion} onValueChange={setAwsRegion}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                            <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                            <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
+                            <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                            <SelectItem value="sa-east-1">South America (São Paulo)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="aws-ses-access-key">Access Key ID</Label>
+                        <Input
+                          id="aws-ses-access-key"
+                          value={awsSesAccessKey}
+                          onChange={(e) => setAwsSesAccessKey(e.target.value)}
+                          placeholder="AKIAIOSFODNN7EXAMPLE"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="aws-ses-secret-key">Secret Access Key</Label>
+                        <div className="relative">
+                          <Input
+                            id="aws-ses-secret-key"
+                            type={showPassword ? "text" : "password"}
+                            value={awsSesSecretKey}
+                            onChange={(e) => setAwsSesSecretKey(e.target.value)}
+                            placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-orange-700 space-y-2">
+                      <p><strong>🚀 Por que SES:</strong> Melhor deliverability, alta capacidade (200 emails/seg), baixo custo ($0.10/1000 emails)</p>
+                      <p><strong>📖 Como configurar:</strong> <a href="https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html" target="_blank" rel="noopener noreferrer" className="underline">Guia AWS SES</a></p>
+                      <p><strong>⚠️ Importante:</strong> Crie credenciais SMTP específicas no painel SES, não use credenciais IAM normais</p>
+                    </div>
+                  </div>
+                )}
+
+                {emailProvider === 'ses-api' && (
+                  <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4 space-y-4">
+                    <h4 className="font-medium text-orange-900 flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Configuração Amazon SES API (Avançado)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="aws-api-region">Região AWS</Label>
+                        <Select value={awsRegion} onValueChange={setAwsRegion}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                            <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                            <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
+                            <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                            <SelectItem value="sa-east-1">South America (São Paulo)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="aws-api-access-key">Access Key ID</Label>
+                        <Input
+                          id="aws-api-access-key"
+                          value={awsSesAccessKey}
+                          onChange={(e) => setAwsSesAccessKey(e.target.value)}
+                          placeholder="AKIAIOSFODNN7EXAMPLE"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="aws-api-secret-key">Secret Access Key</Label>
+                        <div className="relative">
+                          <Input
+                            id="aws-api-secret-key"
+                            type={showPassword ? "text" : "password"}
+                            value={awsSesSecretKey}
+                            onChange={(e) => setAwsSesSecretKey(e.target.value)}
+                            placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-orange-700 space-y-2">
+                      <p><strong>🚀 Recursos Avançados:</strong> Templates nativos, gestão de bounces, estatísticas detalhadas, alta performance</p>
+                      <p><strong>⚡ Performance:</strong> Envio via API REST (mais rápido que SMTP), rate limiting automático</p>
+                      <p><strong>📊 Analytics:</strong> Métricas em tempo real, tracking de bounces/complaints integrado</p>
+                      <p><strong>📖 Documentação:</strong> <a href="https://docs.aws.amazon.com/ses/latest/APIReference/" target="_blank" rel="noopener noreferrer" className="underline">API Reference AWS SES</a></p>
+                    </div>
+
+                    {/* Botão de teste específico para SES API */}
+                    <div className="border-t border-orange-200 pt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Input
+                          placeholder="seu-email@exemplo.com"
+                          value={testEmail}
+                          onChange={(e) => setTestEmail(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          onClick={async () => {
+                            if (!testEmail) return
+                            setTestLoading(true)
+                            try {
+                              const response = await fetch('/api/email/ses/test', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: testEmail })
+                              })
+                              const result = await response.json()
+                              setTestResult(result)
+                            } catch (error) {
+                              setTestResult({ success: false, message: 'Erro na requisição' })
+                            } finally {
+                              setTestLoading(false)
+                            }
+                          }}
+                          disabled={testLoading || !testEmail}
+                          variant="outline"
+                          className="bg-gradient-to-r from-orange-500 to-amber-500 text-white border-none hover:from-orange-600 hover:to-amber-600"
+                        >
+                          {testLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Testando API...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="mr-2 h-4 w-4" />
+                              Testar SES API
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      {testResult && (
+                        <div className={`p-3 rounded-md ${testResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                          <p className="text-sm">{testResult.message}</p>
+                          {testResult.data && (
+                            <div className="mt-2 text-xs">
+                              <p>Método: {testResult.data.method}</p>
+                              {testResult.data.quota && (
+                                <p>Quota: {testResult.data.quota.sentLast24Hours}/{testResult.data.quota.max24HourSend} enviados</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {emailProvider === 'sendgrid' && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
+                    <h4 className="font-medium text-purple-900 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Configuração SendGrid
+                    </h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="sendgrid-api-key">API Key do SendGrid</Label>
+                      <div className="relative">
+                        <Input
+                          id="sendgrid-api-key"
+                          type={showPassword ? "text" : "password"}
+                          value={sendgridApiKey}
+                          onChange={(e) => setSendgridApiKey(e.target.value)}
+                          placeholder="SG.xxxxxxxxxxxxxxxx"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-sm text-purple-700">
+                      <p><strong>📖 Como obter:</strong> <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="underline">Painel do SendGrid</a></p>
+                    </div>
+                  </div>
+                )}
+
+                {emailProvider === 'custom' && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Configuração SMTP Personalizada
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="custom-host">Servidor SMTP</Label>
+                        <Input
+                          id="custom-host"
+                          value={smtpHost}
+                          onChange={(e) => setSmtpHost(e.target.value)}
+                          placeholder="smtp.seuproveedor.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="custom-port">Porta</Label>
+                        <Input
+                          id="custom-port"
+                          value={smtpPort}
+                          onChange={(e) => setSmtpPort(e.target.value)}
+                          placeholder="587"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="custom-user">Usuário</Label>
+                        <Input
+                          id="custom-user"
+                          value={smtpUser}
+                          onChange={(e) => setSmtpUser(e.target.value)}
+                          placeholder="usuario@dominio.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="custom-password">Senha</Label>
+                        <div className="relative">
+                          <Input
+                            id="custom-password"
+                            type={showPassword ? "text" : "password"}
+                            value={smtpPassword}
+                            onChange={(e) => setSmtpPassword(e.target.value)}
+                            placeholder="••••••••"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="smtp-secure"
+                        checked={smtpSecure}
+                        onCheckedChange={setSmtpSecure}
+                      />
+                      <Label htmlFor="smtp-secure">Conexão segura (SSL)</Label>
+                    </div>
+                  </div>
+                )}
+
+                {emailProvider === 'mailhog' && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-yellow-900">MailHog - Ambiente de Desenvolvimento</h4>
+                        <p className="text-yellow-800 text-sm mt-1">
+                          MailHog é ideal para desenvolvimento. Os emails não são enviados de verdade.<br/>
+                          <strong>Interface:</strong> <a href="http://localhost:8025" target="_blank" rel="noopener noreferrer" className="underline">http://localhost:8025</a>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Teste de Configuração */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <TestTube className="h-5 w-5" />
+                  <span>Teste de Configuração</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="seu-email@exemplo.com"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleTestEmail}
+                    disabled={testLoading || !testEmail}
+                    className="flex items-center gap-2"
+                  >
+                    {testLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Testando...
+                      </>
+                    ) : (
+                      <>
+                        <TestTube className="w-4 h-4" />
+                        Testar Envio
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {testResult && (
+                  <div className={`p-3 rounded-md flex items-center gap-2 ${
+                    testResult.success
+                      ? 'bg-green-50 text-green-800 border border-green-200'
+                      : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {testResult.success ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-600" />
+                    )}
+                    <span className="text-sm">{testResult.message}</span>
+                  </div>
+                )}
+
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>💡 <strong>Dica:</strong> Configure um provedor SMTP real (Gmail, SendGrid) para envios em produção.</p>
+                  <p>🔧 <strong>Desenvolvimento:</strong> Use MailHog em localhost:1025 para testar sem envio real.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="notifications">

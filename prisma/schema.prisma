@@ -47,6 +47,12 @@ model User {
   stageChanges           StageHistory[]     @relation("StageChanger")
   revenueTargets         RevenueTarget[]    @relation("UserRevenueTargets")
 
+  // Email Marketing Relations
+  emailTemplates         EmailTemplate[]    @relation("EmailTemplateCreator")
+  emailCampaignsNew      EmailCampaignNew[] @relation("EmailCampaignCreator")
+  emailWorkflows         EmailWorkflow[]    @relation("EmailWorkflowCreator")
+  emailSegments          EmailSegment[]     @relation("EmailSegmentCreator")
+
   @@map("users")
 }
 
@@ -106,6 +112,11 @@ model Lead {
   whatsappConversations  WhatsAppConversation[]
   tagAssignments         LeadTagAssignment[]
   opportunities          Opportunity[]
+
+  // Email Marketing Relations
+  emailRecipients        EmailRecipient[]       @relation("EmailLeadRecipient")
+  emailUnsubscribes      EmailUnsubscribe[]     @relation("EmailLeadUnsubscribe")
+  emailWorkflowExecutions EmailWorkflowExecution[] @relation("EmailWorkflowLead")
 
   @@map("leads")
 }
@@ -865,4 +876,209 @@ model RevenueTarget {
   @@unique([year, month, userId])
   @@index([year, month])
   @@map("revenue_targets")
+}
+
+// ===== EMAIL MARKETING SYSTEM =====
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  subject     String
+  htmlContent String   // HTML do email
+  textContent String?  // Versão texto alternativa
+  variables   String?  // JSON com variáveis disponíveis como {{nome}}, {{empresa}}
+  category    String   @default("MARKETING") // MARKETING, TRANSACTIONAL, WORKFLOW
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy     User           @relation("EmailTemplateCreator", fields: [createdById], references: [id])
+  campaigns     EmailCampaignNew[]
+  workflowSteps EmailWorkflowStep[]
+
+  @@map("email_templates")
+}
+
+model EmailCampaignNew {
+  id             String    @id @default(cuid())
+  name           String
+  subject        String
+  templateId     String?
+  status         String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, PAUSED, CANCELLED
+  type           String    @default("MARKETING") // MARKETING, TRANSACTIONAL, WORKFLOW
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  completedAt    DateTime?
+  totalRecipients Int      @default(0)
+  sentCount      Int       @default(0)
+  deliveredCount Int       @default(0)
+  openedCount    Int       @default(0)
+  clickedCount   Int       @default(0)
+  bouncedCount   Int       @default(0)
+  unsubscribedCount Int    @default(0)
+  segmentConfig  String?   // JSON com critérios de segmentação
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  template      EmailTemplate?         @relation(fields: [templateId], references: [id])
+  createdBy     User                   @relation("EmailCampaignCreator", fields: [createdById], references: [id])
+  recipients    EmailRecipient[]
+  opens         EmailOpen[]
+  clicks        EmailClick[]
+  unsubscribes  EmailUnsubscribe[]
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("email_campaigns_new")
+}
+
+model EmailRecipient {
+  id           String    @id @default(cuid())
+  campaignId   String
+  leadId       String
+  email        String
+  status       String    @default("PENDING") // PENDING, SENT, DELIVERED, BOUNCED, FAILED
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  lastOpenedAt DateTime?
+  lastClickedAt DateTime?
+  openCount    Int       @default(0)
+  clickCount   Int       @default(0)
+  bounceReason String?
+  unsubscribedAt DateTime?
+
+  campaign     EmailCampaignNew    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead         Lead               @relation("EmailLeadRecipient", fields: [leadId], references: [id], onDelete: Cascade)
+  opens        EmailOpen[]
+  clicks       EmailClick[]
+
+  @@unique([campaignId, leadId])
+  @@index([email])
+  @@index([status])
+  @@map("email_recipients")
+}
+
+model EmailOpen {
+  id           String   @id @default(cuid())
+  campaignId   String
+  recipientId  String
+  ipAddress    String?
+  userAgent    String?
+  openedAt     DateTime @default(now())
+
+  campaign     EmailCampaignNew @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipient    EmailRecipient   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([openedAt])
+  @@map("email_opens")
+}
+
+model EmailClick {
+  id           String   @id @default(cuid())
+  campaignId   String
+  recipientId  String
+  url          String
+  linkText     String?
+  ipAddress    String?
+  userAgent    String?
+  clickedAt    DateTime @default(now())
+
+  campaign     EmailCampaignNew @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipient    EmailRecipient   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([clickedAt])
+  @@map("email_clicks")
+}
+
+model EmailUnsubscribe {
+  id             String   @id @default(cuid())
+  campaignId     String?
+  leadId         String
+  email          String
+  reason         String?
+  unsubscribedAt DateTime @default(now())
+  ipAddress      String?
+
+  campaign       EmailCampaignNew? @relation(fields: [campaignId], references: [id])
+  lead           Lead              @relation("EmailLeadUnsubscribe", fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([email])
+  @@index([unsubscribedAt])
+  @@map("email_unsubscribes")
+}
+
+model EmailWorkflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  triggerType String   // LEAD_CREATED, STATUS_CHANGED, TAG_ADDED, DATE_BASED, MANUAL
+  triggerConfig String? // JSON com configuração do trigger
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy  User                    @relation("EmailWorkflowCreator", fields: [createdById], references: [id])
+  steps      EmailWorkflowStep[]
+  executions EmailWorkflowExecution[]
+
+  @@map("email_workflows")
+}
+
+model EmailWorkflowStep {
+  id          String   @id @default(cuid())
+  workflowId  String
+  templateId  String?
+  stepOrder   Int
+  delayHours  Int      @default(0) // Delay antes de enviar
+  conditions  String?  // JSON com condições para envio
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  workflow    EmailWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  template    EmailTemplate? @relation(fields: [templateId], references: [id])
+
+  @@index([workflowId, stepOrder])
+  @@map("email_workflow_steps")
+}
+
+model EmailWorkflowExecution {
+  id           String    @id @default(cuid())
+  workflowId   String
+  leadId       String
+  currentStep  Int       @default(1)
+  status       String    @default("RUNNING") // RUNNING, COMPLETED, PAUSED, FAILED
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  nextStepAt   DateTime?
+  data         String?   // JSON com dados do contexto da execução
+
+  workflow     EmailWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  lead         Lead          @relation("EmailWorkflowLead", fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([leadId])
+  @@index([nextStepAt])
+  @@map("email_workflow_executions")
+}
+
+model EmailSegment {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  conditions  String   // JSON com critérios de segmentação
+  dynamic     Boolean  @default(true) // Se é dinâmico (atualiza automaticamente)
+  leadCount   Int      @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy   User     @relation("EmailSegmentCreator", fields: [createdById], references: [id])
+
+  @@map("email_segments")
 }

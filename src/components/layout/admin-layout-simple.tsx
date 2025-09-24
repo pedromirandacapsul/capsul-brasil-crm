@@ -25,6 +25,7 @@ import {
   DollarSign,
   PieChart,
   FileText,
+  Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GuidedTour } from '@/components/tour/guided-tour'
@@ -65,6 +66,11 @@ const navigation = [
     name: 'Oportunidades',
     href: '/admin/opportunities',
     icon: DollarSign,
+  },
+  {
+    name: 'Email Marketing',
+    href: '/admin/email-marketing',
+    icon: Mail,
   },
   {
     name: 'Pipeline',

@@ -28,6 +28,7 @@ import {
   Bot,
   PieChart,
   FileText,
+  Mail,
 } from 'lucide-react'
 import { hasPermission, PERMISSIONS, canAccessRoute } from '@/lib/rbac'
 import { cn } from '@/lib/utils'
@@ -80,6 +81,12 @@ const navigation = [
     href: '/admin/opportunities',
     icon: DollarSign,
     permission: PERMISSIONS.OPPORTUNITIES_VIEW,
+  },
+  {
+    name: 'Email Marketing',
+    href: '/admin/email-marketing',
+    icon: Mail,
+    permission: PERMISSIONS.LEADS_VIEW,
   },
   {
     name: 'Pipeline',
