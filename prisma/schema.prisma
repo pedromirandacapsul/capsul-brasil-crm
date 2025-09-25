@@ -137,6 +137,7 @@ model Lead {
 
   // Sales Automation Relations
   scheduledEmails ScheduledEmail[] @relation("ScheduledEmailLead")
+  emailSends      EmailSend[]
 
   @@map("leads")
 }
@@ -922,6 +923,7 @@ model EmailTemplate {
   campaigns            EmailCampaignNew[]
   workflowSteps        EmailWorkflowStep[]
   salesAutomationRules SalesAutomationRule[] @relation("SalesAutomationTemplate")
+  emailSends           EmailSend[]
 
   @@map("email_templates")
 }
@@ -954,6 +956,7 @@ model EmailCampaignNew {
   opens        EmailOpen[]
   clicks       EmailClick[]
   unsubscribes EmailUnsubscribe[]
+  emailSends   EmailSend[]
 
   @@index([status])
   @@index([scheduledAt])
@@ -1314,6 +1317,29 @@ model EmailEvent {
   @@index([eventType])
   @@index([createdAt])
   @@map("email_events")
+}
+
+model EmailSend {
+  id          String    @id @default(cuid())
+  campaignId  String?
+  leadId      String
+  templateId  String?
+  status      String    @default("PENDING")
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+
+  lead        Lead      @relation(fields: [leadId], references: [id])
+  campaign    EmailCampaignNew? @relation(fields: [campaignId], references: [id])
+  template    EmailTemplate? @relation(fields: [templateId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([campaignId])
+  @@index([status])
+  @@map("email_sends")
 }
 
 // ===== SCHEMA COMPLETO - TODAS AS FUNCIONALIDADES INTEGRADAS =====

@@ -9,6 +9,28 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+// Adicionar estas interfaces
+interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  htmlContent: string;
+  category: string;
+}
+
+interface LeadSegment {
+  id: string;
+  name: string;
+  criteria: any;
+  leadCount?: number;
+}
+
+interface ABTestCreatorProps {
+  templates: EmailTemplate[];
+  segments: LeadSegment[];
+  onSave: () => void;
+}
+
 interface ABTestConfig {
   name: string;
   templateId: string;
@@ -33,11 +55,7 @@ interface ABTestConfig {
   };
 }
 
-interface ABTestCreatorProps {
-  templates: Array<{ id: string; name: string; subject: string }>;
-  segments: Array<{ id: string; name: string }>;
-  onSave: () => void;
-}
+// REMOVER esta interface duplicada - já definida acima
 
 export function ABTestCreator({ templates, segments, onSave }: ABTestCreatorProps) {
   const [config, setConfig] = useState<ABTestConfig>({

@@ -90,4 +90,24 @@ export class EmailTrackingService {
       trackingId: tracking.id
     };
   }
+
+  // Método auxiliar para gerar ID de tracking
+  private generateTrackId(): string {
+    return crypto.randomBytes(8).toString('hex');
+  }
+
+  // Método para remover HTML tags
+  private stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, '');
+  }
+
+  // Método para validar URL
+  private isValidUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
