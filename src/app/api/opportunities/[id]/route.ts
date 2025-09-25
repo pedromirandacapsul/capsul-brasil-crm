@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
+import { opportunityWebhooks } from '@/services/webhook-service'
 
 interface RouteParams {
   params: Promise<{
@@ -241,6 +242,62 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       })
     }
 
+    // Trigger webhooks for opportunity changes
+    try {
+      // Always trigger updated webhook
+      await opportunityWebhooks.updated({
+        opportunity: updatedOpportunity,
+        previousData: currentOpportunity,
+        changedFields: Object.keys(body),
+        updatedBy: {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email
+        }
+      })
+
+      // Trigger specific webhooks for stage changes
+      if (body.stage && body.stage !== currentOpportunity.stage) {
+        await opportunityWebhooks.stageChanged({
+          opportunity: updatedOpportunity,
+          previousStage: currentOpportunity.stage,
+          newStage: body.stage,
+          changedBy: {
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email
+          }
+        })
+
+        // Trigger specific win/loss webhooks
+        if (body.stage === 'WON' && currentOpportunity.stage !== 'WON') {
+          await opportunityWebhooks.won({
+            opportunity: updatedOpportunity,
+            previousStage: currentOpportunity.stage,
+            wonBy: {
+              id: session.user.id,
+              name: session.user.name,
+              email: session.user.email
+            }
+          })
+        } else if (body.stage === 'LOST' && currentOpportunity.stage !== 'LOST') {
+          await opportunityWebhooks.lost({
+            opportunity: updatedOpportunity,
+            previousStage: currentOpportunity.stage,
+            lostReason: body.lostReason,
+            lostBy: {
+              id: session.user.id,
+              name: session.user.name,
+              email: session.user.email
+            }
+          })
+        }
+      }
+    } catch (webhookError) {
+      console.error('Webhook error for opportunity update:', webhookError)
+      // Don't fail the API call if webhook fails
+    }
+
     return NextResponse.json({
       success: true,
       data: updatedOpportunity
@@ -297,6 +354,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     await prisma.opportunity.delete({
       where: { id }
     })
+
+    // Trigger webhook for opportunity deletion
+    try {
+      await opportunityWebhooks.deleted({
+        opportunity,
+        deletedBy: {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email
+        }
+      })
+    } catch (webhookError) {
+      console.error('Webhook error for opportunity deletion:', webhookError)
+      // Don't fail the API call if webhook fails
+    }
 
     return NextResponse.json({
       success: true,

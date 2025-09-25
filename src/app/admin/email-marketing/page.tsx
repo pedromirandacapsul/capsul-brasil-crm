@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Mail, TrendingUp, Users, Send, TestTube, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Mail, TrendingUp, Users, Send, TestTube, CheckCircle, XCircle, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 interface EmailMetrics {
@@ -113,7 +113,7 @@ export default function EmailMarketingPage() {
         </div>
 
         {/* Ações Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Link
             href="/admin/email-marketing/templates"
             className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
@@ -179,6 +179,40 @@ export default function EmailMarketingPage() {
             <div className="flex items-center text-purple-600 text-sm font-medium">
               <TrendingUp className="w-4 h-4 mr-1" />
               Ver Analytics
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/sales/scheduled-emails"
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Automação de Vendas</h3>
+              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
+                <Zap className="w-5 h-5 text-yellow-600" />
+              </div>
+            </div>
+            <p className="text-gray-600 mb-4">Monitore emails automáticos e atividades de vendas</p>
+            <div className="flex items-center text-yellow-600 text-sm font-medium">
+              <Zap className="w-4 h-4 mr-1" />
+              Ver Dashboard
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/sales/templates"
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Templates de Vendas</h3>
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                <Mail className="w-5 h-5 text-red-600" />
+              </div>
+            </div>
+            <p className="text-gray-600 mb-4">Gerencie templates para propostas e follow-ups</p>
+            <div className="flex items-center text-red-600 text-sm font-medium">
+              <Plus className="w-4 h-4 mr-1" />
+              Gerenciar Templates
             </div>
           </Link>
         </div>

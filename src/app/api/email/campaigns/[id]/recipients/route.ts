@@ -30,19 +30,21 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json()
-    const { leadIds, segmentCriteria } = body
+    console.log('📧 Recipients API - Body recebido:', JSON.stringify(body, null, 2))
 
-    if (!leadIds && !segmentCriteria) {
+    const { leadIds, segmentCriteria, emails } = body
+
+    if (!leadIds && !segmentCriteria && !emails) {
+      console.log('❌ Recipients API - Nenhum dado válido fornecido:', { leadIds, segmentCriteria, emails })
       return NextResponse.json(
-        { success: false, error: 'É necessário especificar leads ou critérios de segmentação' },
+        { success: false, error: 'É necessário especificar leads, critérios de segmentação ou emails' },
         { status: 400 }
       )
     }
 
     const recipientsAdded = await emailMarketingService.addRecipientsToCampaign(
       params.id,
-      leadIds,
-      segmentCriteria
+      { leadIds, segmentCriteria, emails }
     )
 
     return NextResponse.json({

@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
   try {
     // Verificar autenticação
     const session = await getServerSession(authOptions)
-    if (!session?.user || !hasPermission(session.user.role, PERMISSIONS.EMAIL_MARKETING)) {
+    const skipAuth = process.env.SKIP_AUTH_IN_DEVELOPMENT === 'true'
+
+    if (!skipAuth && (!session?.user || !hasPermission(session.user.role, PERMISSIONS.EMAIL_MARKETING))) {
       return NextResponse.json(
         { success: false, error: 'Não autorizado' },
         { status: 401 }
@@ -71,12 +73,21 @@ export async function POST(request: NextRequest) {
 
     console.log('✨ Criando workflow:', name)
 
+    // Se não tem sessão, buscar usuário admin
+    let userId = session?.user?.id
+    if (!userId) {
+      const adminUser = await prisma.user.findFirst({
+        where: { role: 'ADMIN' }
+      })
+      userId = adminUser?.id || 'admin-default'
+    }
+
     const result = await workflowService.createWorkflow({
       name,
       description,
       trigger,
       steps,
-      userId: session.user.id
+      userId
     })
 
     if (!result.success) {

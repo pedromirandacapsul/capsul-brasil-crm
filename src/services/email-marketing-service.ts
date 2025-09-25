@@ -1013,6 +1013,56 @@ export class EmailMarketingService {
     }
   }
 
+  // ===== MÉTODO PÚBLICO PARA WORKFLOWS =====
+
+  async sendEmail(data: {
+    to: string[] | string
+    subject: string
+    htmlBody: string
+    textBody?: string
+  }): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    try {
+      const to = Array.isArray(data.to) ? data.to[0] : data.to
+
+      const fromName = process.env.SMTP_FROM_NAME || 'Capsul Brasil CRM'
+      const fromEmail = process.env.SMTP_FROM || 'noreply@capsul.com.br'
+      const from = `"${fromName}" <${fromEmail}>`
+
+      console.log('📧 Enviando email de workflow:', {
+        to,
+        subject: data.subject,
+        from
+      })
+
+      const info = await this.transporter.sendMail({
+        from,
+        to,
+        subject: data.subject,
+        html: data.htmlBody,
+        text: data.textBody
+      })
+
+      console.log('✅ Email de workflow enviado:', {
+        messageId: info.messageId,
+        to,
+        accepted: info.accepted,
+        rejected: info.rejected
+      })
+
+      return {
+        success: true,
+        messageId: info.messageId
+      }
+
+    } catch (error) {
+      console.error('❌ Erro ao enviar email de workflow:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      }
+    }
+  }
+
   // ===== UTILITÁRIOS =====
 
   private mapCampaignFromPrisma(campaign: any): EmailCampaign {
@@ -1067,6 +1117,180 @@ export class EmailMarketingService {
       avgClickRate: totalOpened > 0 ? (totalClicked / totalOpened) * 100 : 0,
       activeTemplates: templates
     }
+  }
+
+  // ===== CAMPAIGN CRUD METHODS =====
+
+  async getCampaignById(campaignId: string) {
+    return await prisma.emailCampaignNew.findUnique({
+      where: { id: campaignId }
+    })
+  }
+
+  async updateCampaign(campaignId: string, data: {
+    name?: string
+    subject?: string
+    type?: string
+    scheduledAt?: Date | null
+  }) {
+    return await prisma.emailCampaignNew.update({
+      where: { id: campaignId },
+      data: {
+        ...data,
+        updatedAt: new Date()
+      }
+    })
+  }
+
+  async deleteCampaign(campaignId: string) {
+    // Primeiro, deletar recipients relacionados
+    await prisma.emailRecipient.deleteMany({
+      where: { campaignId }
+    })
+
+    // Depois deletar a campanha
+    return await prisma.emailCampaignNew.delete({
+      where: { id: campaignId }
+    })
+  }
+
+  async addRecipientsToCampaign(
+    campaignId: string,
+    data: {
+      leadIds?: string[],
+      segmentCriteria?: any,
+      emails?: string[]
+    }
+  ): Promise<number> {
+    const { leadIds, segmentCriteria, emails } = data
+    let recipients: { leadId: string, email: string }[] = []
+
+    // Se forneceram leadIds
+    if (leadIds && leadIds.length > 0) {
+      const leads = await prisma.lead.findMany({
+        where: { id: { in: leadIds } },
+        select: { id: true, email: true }
+      })
+      recipients = leads.map(lead => ({ leadId: lead.id, email: lead.email }))
+    }
+
+    // Se forneceram emails, buscar ou criar leads
+    if (emails && emails.length > 0) {
+      for (const email of emails) {
+        // Buscar lead existente
+        let lead = await prisma.lead.findFirst({
+          where: { email },
+          select: { id: true, email: true }
+        })
+
+        // Se não existir, criar um novo lead
+        if (!lead) {
+          lead = await prisma.lead.create({
+            data: {
+              name: email.split('@')[0], // Usar parte antes do @ como nome
+              email,
+              status: 'NEW',
+              source: 'EMAIL_CAMPAIGN',
+              phone: '',
+              company: ''
+            },
+            select: { id: true, email: true }
+          })
+        }
+
+        recipients.push({ leadId: lead.id, email: lead.email })
+      }
+    }
+
+    // TODO: Implementar segmentCriteria se necessário
+
+    // Verificar se já existem recipients para evitar duplicatas
+    const existingRecipients = await prisma.emailRecipient.findMany({
+      where: {
+        campaignId,
+        leadId: { in: recipients.map(r => r.leadId) }
+      },
+      select: { leadId: true }
+    })
+
+    const existingLeadIds = existingRecipients.map(r => r.leadId)
+    const newRecipients = recipients.filter(r => !existingLeadIds.includes(r.leadId))
+
+    if (newRecipients.length === 0) {
+      return 0
+    }
+
+    // Adicionar novos recipients
+    const recipientData = newRecipients.map(r => ({
+      campaignId,
+      leadId: r.leadId,
+      email: r.email,
+      status: 'PENDING' as const
+    }))
+
+    await prisma.emailRecipient.createMany({
+      data: recipientData
+    })
+
+    // Atualizar contador na campanha
+    await prisma.emailCampaignNew.update({
+      where: { id: campaignId },
+      data: {
+        totalRecipients: {
+          increment: newRecipients.length
+        }
+      }
+    })
+
+    return newRecipients.length
+  }
+
+  // ===== EMAIL TEMPLATES =====
+
+  async getTemplates(category?: string) {
+    const templates = await prisma.emailTemplate.findMany({
+      where: {
+        active: true,
+        ...(category && { category })
+      },
+      select: {
+        id: true,
+        name: true,
+        subject: true,
+        category: true,
+        htmlContent: true,
+        textContent: true,
+        variables: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return templates.map(template => ({
+      ...template,
+      variables: template.variables ? JSON.parse(template.variables) : []
+    }))
+  }
+
+  async createTemplate(data: {
+    name: string
+    description?: string
+    subject: string
+    htmlContent: string
+    textContent?: string
+    variables?: string[]
+    category: string
+    createdById: string
+  }) {
+    const template = await prisma.emailTemplate.create({
+      data: {
+        ...data,
+        variables: data.variables ? JSON.stringify(data.variables) : null
+      }
+    })
+
+    return template
   }
 }
 

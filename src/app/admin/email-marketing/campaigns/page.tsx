@@ -28,6 +28,17 @@ export default function EmailCampaignsPage() {
     type: 'MARKETING',
     scheduledAt: ''
   })
+  const [showRecipientsModal, setShowRecipientsModal] = useState(false)
+  const [selectedCampaign, setSelectedCampaign] = useState<EmailCampaign | null>(null)
+  const [recipients, setRecipients] = useState<string>('')
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    subject: '',
+    htmlContent: '',
+    type: 'MARKETING',
+    scheduledAt: ''
+  })
 
   useEffect(() => {
     fetchCampaigns()
@@ -75,6 +86,119 @@ export default function EmailCampaignsPage() {
       }
     } catch (error) {
       console.error('Erro ao criar campanha:', error)
+    }
+  }
+
+  const handleAddRecipients = async () => {
+    if (!selectedCampaign || !recipients.trim()) return
+
+    try {
+      const emailList = recipients.split('\n').map(email => email.trim()).filter(email => email)
+      const response = await fetch(`/api/email/campaigns/${selectedCampaign.id}/recipients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emails: emailList }),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        // Atualizar campanha na lista
+        setCampaigns(campaigns.map(c =>
+          c.id === selectedCampaign.id
+            ? { ...c, totalRecipients: c.totalRecipients + emailList.length }
+            : c
+        ))
+        setShowRecipientsModal(false)
+        setRecipients('')
+        setSelectedCampaign(null)
+      } else {
+        alert('Erro ao adicionar recipients: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar recipients:', error)
+      alert('Erro ao adicionar recipients')
+    }
+  }
+
+  const handleSendCampaign = async (campaignId: string) => {
+    if (!confirm('Tem certeza que deseja enviar esta campanha?')) return
+
+    try {
+      const response = await fetch(`/api/email/campaigns/${campaignId}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        alert('Campanha enviada com sucesso!')
+        fetchCampaigns() // Recarregar lista
+      } else {
+        alert('Erro ao enviar campanha: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Erro ao enviar campanha:', error)
+      alert('Erro ao enviar campanha')
+    }
+  }
+
+  const handleEditCampaign = (campaign: EmailCampaign) => {
+    setSelectedCampaign(campaign)
+    setEditFormData({
+      name: campaign.name,
+      subject: campaign.subject,
+      htmlContent: '', // Será carregado da API
+      type: campaign.type,
+      scheduledAt: campaign.scheduledAt ? new Date(campaign.scheduledAt).toISOString().slice(0, 16) : ''
+    })
+    setShowEditModal(true)
+  }
+
+  const handleUpdateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedCampaign) return
+
+    try {
+      const response = await fetch(`/api/email/campaigns/${selectedCampaign.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...editFormData,
+          scheduledAt: editFormData.scheduledAt ? new Date(editFormData.scheduledAt).toISOString() : undefined
+        }),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        // Atualizar campanha na lista
+        setCampaigns(campaigns.map(c =>
+          c.id === selectedCampaign.id
+            ? { ...c, ...editFormData, scheduledAt: editFormData.scheduledAt }
+            : c
+        ))
+        setShowEditModal(false)
+        setSelectedCampaign(null)
+        setEditFormData({
+          name: '',
+          subject: '',
+          htmlContent: '',
+          type: 'MARKETING',
+          scheduledAt: ''
+        })
+        alert('Campanha atualizada com sucesso!')
+      } else {
+        alert('Erro ao atualizar campanha: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar campanha:', error)
+      alert('Erro ao atualizar campanha')
     }
   }
 
@@ -183,14 +307,37 @@ export default function EmailCampaignsPage() {
                   </div>
 
                   <div className="flex space-x-2 ml-4">
-                    <button className="text-gray-400 hover:text-blue-600 p-2">
+                    <button
+                      onClick={() => {
+                        setSelectedCampaign(campaign)
+                        setShowRecipientsModal(true)
+                      }}
+                      className="text-gray-400 hover:text-blue-600 p-2"
+                      title="Adicionar Recipients"
+                    >
+                      <Users className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => alert('Funcionalidade de visualização em desenvolvimento')}
+                      className="text-gray-400 hover:text-green-600 p-2"
+                      title="Visualizar"
+                    >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button className="text-gray-400 hover:text-green-600 p-2">
+                    <button
+                      onClick={() => handleEditCampaign(campaign)}
+                      className="text-gray-400 hover:text-yellow-600 p-2"
+                      title="Editar"
+                      disabled={campaign.status !== 'DRAFT'}
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
                     {campaign.status === 'DRAFT' && (
-                      <button className="text-gray-400 hover:text-purple-600 p-2">
+                      <button
+                        onClick={() => handleSendCampaign(campaign.id)}
+                        className="text-gray-400 hover:text-purple-600 p-2"
+                        title="Enviar Campanha"
+                      >
                         <Send className="w-4 h-4" />
                       </button>
                     )}
@@ -275,6 +422,182 @@ export default function EmailCampaignsPage() {
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     Criar Campanha
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Recipients */}
+        {showRecipientsModal && selectedCampaign && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Adicionar Recipients - {selectedCampaign.name}
+              </h2>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  Recipients atuais: <strong>{selectedCampaign.totalRecipients}</strong>
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Emails (um por linha)
+                </label>
+                <textarea
+                  value={recipients}
+                  onChange={(e) => setRecipients(e.target.value)}
+                  className="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="pedro@grupocapsul.com.br
+joao@exemplo.com
+maria@teste.com"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Cole uma lista de emails, um por linha. Emails inválidos serão ignorados.
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <button
+                  onClick={() => setRecipients('pedro@grupocapsul.com.br')}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  📧 Usar email teste (pedro@grupocapsul.com.br)
+                </button>
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRecipientsModal(false)
+                    setSelectedCampaign(null)
+                    setRecipients('')
+                  }}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddRecipients}
+                  disabled={!recipients.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Adicionar Recipients
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Edição */}
+        {showEditModal && selectedCampaign && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Editar Campanha: {selectedCampaign.name}
+              </h2>
+
+              <form onSubmit={handleUpdateCampaign} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Campanha</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex: Newsletter Dezembro"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Assunto</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.subject}
+                    onChange={(e) => setEditFormData({...editFormData, subject: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ex: Novidades de dezembro - Capsul"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Conteúdo HTML</label>
+                  <textarea
+                    value={editFormData.htmlContent}
+                    onChange={(e) => setEditFormData({...editFormData, htmlContent: e.target.value})}
+                    rows={8}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="<h1>Olá!</h1><p>Conteúdo da sua campanha...</p>"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Use HTML para criar emails mais atraentes. Variáveis: {"{nome}"}, {"{email}"}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                  <select
+                    value={editFormData.type}
+                    onChange={(e) => setEditFormData({...editFormData, type: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="MARKETING">Marketing</option>
+                    <option value="TRANSACTIONAL">Transacional</option>
+                    <option value="WORKFLOW">Workflow</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Agendar para (opcional)</label>
+                  <input
+                    type="datetime-local"
+                    value={editFormData.scheduledAt}
+                    onChange={(e) => setEditFormData({...editFormData, scheduledAt: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center text-blue-800 mb-2">
+                    <span className="font-medium">📊 Estatísticas Atuais:</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-blue-700">
+                    <div>Recipients: {selectedCampaign.totalRecipients}</div>
+                    <div>Status: {selectedCampaign.status}</div>
+                    <div>Enviados: {selectedCampaign.sentCount}</div>
+                    <div>Abertos: {selectedCampaign.openedCount}</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false)
+                      setSelectedCampaign(null)
+                      setEditFormData({
+                        name: '',
+                        subject: '',
+                        htmlContent: '',
+                        type: 'MARKETING',
+                        scheduledAt: ''
+                      })
+                    }}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Salvar Alterações
                   </button>
                 </div>
               </form>

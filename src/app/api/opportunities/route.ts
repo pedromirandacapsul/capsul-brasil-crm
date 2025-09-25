@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
+import { opportunityWebhooks } from '@/services/webhook-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -264,6 +265,21 @@ export async function POST(request: NextRequest) {
         changedBy: session?.user?.id || 'cmfvq4tnh0000nce5axicbr1u'
       }
     })
+
+    // Trigger webhook for opportunity creation
+    try {
+      await opportunityWebhooks.created({
+        opportunity,
+        createdBy: {
+          id: session?.user?.id || 'cmfvq4tnh0000nce5axicbr1u',
+          name: session?.user?.name || 'System',
+          email: session?.user?.email || 'system@capsul.com'
+        }
+      })
+    } catch (webhookError) {
+      console.error('Webhook error for opportunity creation:', webhookError)
+      // Don't fail the API call if webhook fails
+    }
 
     return NextResponse.json({
       success: true,

@@ -25,6 +25,7 @@ export default function EmailTemplatesPage() {
     textContent: '',
     category: 'MARKETING'
   })
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
 
   useEffect(() => {
     fetchTemplates()
@@ -73,6 +74,50 @@ export default function EmailTemplatesPage() {
       }
     } catch (error) {
       console.error('Erro ao criar template:', error)
+    }
+  }
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este template?')) return
+
+    try {
+      const response = await fetch(`/api/email/templates/${templateId}`, {
+        method: 'DELETE'
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        setTemplates(templates.filter(t => t.id !== templateId))
+        alert('Template excluído com sucesso!')
+      } else {
+        alert('Erro ao excluir template: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Erro ao excluir template:', error)
+      alert('Erro ao excluir template')
+    }
+  }
+
+  const handleEditTemplate = (template: EmailTemplate) => {
+    setEditingTemplate(template)
+    setFormData({
+      name: template.name,
+      description: '',
+      subject: template.subject,
+      htmlContent: template.htmlContent,
+      textContent: template.textContent || '',
+      category: 'MARKETING'
+    })
+    setShowCreateModal(true)
+  }
+
+  const handleUseTemplate = (template: EmailTemplate) => {
+    // Copiar o template para a área de transferência ou redirecionar para criar campanha
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(template.htmlContent)
+      alert('Conteúdo HTML do template copiado para a área de transferência!')
+    } else {
+      alert(`Template: ${template.name}\nAssunto: ${template.subject}\n\nUse este template ao criar uma nova campanha.`)
     }
   }
 
@@ -128,10 +173,18 @@ export default function EmailTemplatesPage() {
                     <p className="text-sm text-gray-600">{template.subject}</p>
                   </div>
                   <div className="flex space-x-2">
-                    <button className="text-gray-400 hover:text-blue-600">
+                    <button
+                      onClick={() => handleEditTemplate(template)}
+                      className="text-gray-400 hover:text-blue-600"
+                      title="Editar Template"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button className="text-gray-400 hover:text-red-600">
+                    <button
+                      onClick={() => handleDeleteTemplate(template.id)}
+                      className="text-gray-400 hover:text-red-600"
+                      title="Excluir Template"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -159,7 +212,11 @@ export default function EmailTemplatesPage() {
 
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">Template ID: {template.id.substring(0, 8)}...</span>
-                  <button className="text-blue-600 text-sm font-medium hover:text-blue-700">
+                  <button
+                    onClick={() => handleUseTemplate(template)}
+                    className="text-blue-600 text-sm font-medium hover:text-blue-700"
+                    title="Copiar conteúdo do template"
+                  >
                     Usar Template
                   </button>
                 </div>
@@ -172,7 +229,9 @@ export default function EmailTemplatesPage() {
         {showCreateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Criar Novo Template</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                {editingTemplate ? 'Editar Template' : 'Criar Novo Template'}
+              </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -225,7 +284,18 @@ export default function EmailTemplatesPage() {
                 <div className="flex justify-end space-x-4">
                   <button
                     type="button"
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => {
+                      setShowCreateModal(false)
+                      setEditingTemplate(null)
+                      setFormData({
+                        name: '',
+                        description: '',
+                        subject: '',
+                        htmlContent: '',
+                        textContent: '',
+                        category: 'MARKETING'
+                      })
+                    }}
                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     Cancelar
@@ -234,7 +304,7 @@ export default function EmailTemplatesPage() {
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    Criar Template
+                    {editingTemplate ? 'Salvar Alterações' : 'Criar Template'}
                   </button>
                 </div>
               </form>

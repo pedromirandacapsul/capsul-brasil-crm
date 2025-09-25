@@ -4,6 +4,7 @@ import { createLeadSchema, leadFiltersSchema } from '@/lib/validations'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { AdsIntegrationService } from '@/lib/ads-integration'
+import { emailWorkflowService } from '@/services/email-workflow-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +56,17 @@ export async function POST(request: NextRequest) {
 
           return lead
         })
+
+        // Disparar workflows automáticos para lead reaberto
+        try {
+          await emailWorkflowService.checkAutoTriggers(updatedLead.id, 'LEAD_CREATED', {
+            leadData: updatedLead,
+            reopened: true
+          })
+          console.log('✅ Triggers de workflow verificados para lead reaberto:', updatedLead.id)
+        } catch (error) {
+          console.error('❌ Erro ao verificar triggers de workflow:', error)
+        }
 
         return NextResponse.json({
           success: true,
@@ -140,6 +152,17 @@ export async function POST(request: NextRequest) {
 
       return lead
     })
+
+    // Disparar workflows automáticos para lead criado
+    try {
+      await emailWorkflowService.checkAutoTriggers(newLead.id, 'LEAD_CREATED', {
+        leadData: newLead
+      })
+      console.log('✅ Triggers de workflow verificados para lead:', newLead.id)
+    } catch (error) {
+      console.error('❌ Erro ao verificar triggers de workflow:', error)
+      // Não impede a criação do lead em caso de erro nos workflows
+    }
 
     return NextResponse.json({
       success: true,

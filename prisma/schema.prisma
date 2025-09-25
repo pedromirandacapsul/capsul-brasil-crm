@@ -20,82 +20,89 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Existing relations
-  ownedLeads   Lead[]     @relation("LeadOwner")
-  activities   Activity[]
-  assignedTasks Task[]    @relation("TaskAssignee")
-  createdTasks Task[]     @relation("TaskCreator")
-  auditLogs    AuditLog[]
+  ownedLeads    Lead[]     @relation("LeadOwner")
+  activities    Activity[]
+  assignedTasks Task[]     @relation("TaskAssignee")
+  createdTasks  Task[]     @relation("TaskCreator")
+  auditLogs     AuditLog[]
 
   // New relations
-  messageTemplates       MessageTemplate[]
-  conversations          Conversation[]
-  sentMessages           Message[]
-  workflows              Workflow[]
-  calendarEvents         CalendarEvent[]
-  chatRooms              ChatRoom[]
-  chatParticipants       ChatParticipant[]
-  chatMessages           ChatMessage[]
-  emailCampaigns         EmailCampaign[]
-  salesCelebrations      SalesCelebration[]
-  whatsappAccounts       WhatsAppAccount[]
-  whatsappConversations  WhatsAppConversation[]
-  whatsappMessages       WhatsAppMessage[]
-  whatsappTemplates      WhatsAppTemplate[]
-  messageFlows           MessageFlow[]
-  tagAssignments         LeadTagAssignment[]
-  ownedOpportunities     Opportunity[]      @relation("OpportunityOwner")
-  stageChanges           StageHistory[]     @relation("StageChanger")
-  revenueTargets         RevenueTarget[]    @relation("UserRevenueTargets")
+  messageTemplates      MessageTemplate[]
+  conversations         Conversation[]
+  sentMessages          Message[]
+  workflows             Workflow[]
+  calendarEvents        CalendarEvent[]
+  chatRooms             ChatRoom[]
+  chatParticipants      ChatParticipant[]
+  chatMessages          ChatMessage[]
+  emailCampaigns        EmailCampaign[]
+  salesCelebrations     SalesCelebration[]
+  whatsappAccounts      WhatsAppAccount[]
+  whatsappConversations WhatsAppConversation[]
+  whatsappMessages      WhatsAppMessage[]
+  whatsappTemplates     WhatsAppTemplate[]
+  messageFlows          MessageFlow[]
+  tagAssignments        LeadTagAssignment[]
+  ownedOpportunities    Opportunity[]          @relation("OpportunityOwner")
+  stageChanges          StageHistory[]         @relation("StageChanger")
+  revenueTargets        RevenueTarget[]        @relation("UserRevenueTargets")
 
   // Email Marketing Relations
-  emailTemplates         EmailTemplate[]    @relation("EmailTemplateCreator")
-  emailCampaignsNew      EmailCampaignNew[] @relation("EmailCampaignCreator")
-  emailWorkflows         EmailWorkflow[]    @relation("EmailWorkflowCreator")
-  emailSegments          EmailSegment[]     @relation("EmailSegmentCreator")
+  emailTemplates    EmailTemplate[]    @relation("EmailTemplateCreator")
+  emailCampaignsNew EmailCampaignNew[] @relation("EmailCampaignCreator")
+  emailWorkflows    EmailWorkflow[]    @relation("EmailWorkflowCreator")
+  emailSegments     EmailSegment[]     @relation("EmailSegmentCreator")
+
+  // Sales Automation Relations
+  salesAutomationRules SalesAutomationRule[] @relation("SalesAutomationCreator")
+  salesTemplates       SalesTemplate[]       @relation("SalesTemplateCreator")
+
+  // Webhook Relations
+  webhooks Webhook[] @relation("WebhookCreator")
 
   @@map("users")
 }
 
 model Lead {
-  id              String     @id @default(cuid())
-  name            String
-  email           String?
-  phone           String?
-  company         String?
-  roleTitle       String?
-  interest        String?
-  notes           String?
-  source          String?
-  sourceDetails   String?    // NEW: Subcategoria da origem (Meta Ads, Google Ads, etc)
-  utmSource       String?
-  utmMedium       String?
-  utmCampaign     String?
-  utmTerm         String?
-  utmContent      String?
-  referrer        String?
-  consentLGPD     Boolean    @default(false)
-  status          String     @default("NEW") // NEW, NOT_ANSWERED_1, NOT_ANSWERED_2, CONTACTED, QUALIFIED, PROPOSAL, WON, LOST
-  score           Int        @default(0)
-  ownerId         String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  firstContactAt  DateTime?
-  lastActivityAt  DateTime?
-  lastInteractionAt DateTime? // NEW: Última ligação, WhatsApp ou email
+  id                  String    @id @default(cuid())
+  name                String
+  email               String?
+  phone               String?
+  company             String?
+  roleTitle           String?
+  interest            String?
+  notes               String?
+  source              String?
+  sourceDetails       String? // NEW: Subcategoria da origem (Meta Ads, Google Ads, etc)
+  utmSource           String?
+  utmMedium           String?
+  utmCampaign         String?
+  utmTerm             String?
+  utmContent          String?
+  referrer            String?
+  consentLGPD         Boolean   @default(false)
+  status              String    @default("NEW") // NEW, NOT_ANSWERED_1, NOT_ANSWERED_2, CONTACTED, QUALIFIED, PROPOSAL, WON, LOST
+  score               Int       @default(0)
+  ownerId             String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  firstContactAt      DateTime?
+  lastActivityAt      DateTime?
+  lastInteractionAt   DateTime? // NEW: Última ligação, WhatsApp ou email
   lastInteractionType String? // NEW: CALL, WHATSAPP, EMAIL
-  nextActionAt    DateTime?  // NEW: Data/hora da próxima ação agendada
-  nextActionType  String?    // NEW: Tipo da próxima ação (CALL, WHATSAPP, EMAIL, MEETING)
-  nextActionNotes String?    // NEW: Observações sobre a próxima ação
-  lossReason      String?    // NEW: Motivo da perda/desqualificação
-  lossDetails     String?    // NEW: Detalhes do motivo da perda
+  nextActionAt        DateTime? // NEW: Data/hora da próxima ação agendada
+  nextActionType      String? // NEW: Tipo da próxima ação (CALL, WHATSAPP, EMAIL, MEETING)
+  nextActionNotes     String? // NEW: Observações sobre a próxima ação
+  lossReason          String? // NEW: Motivo da perda/desqualificação
+  lossDetails         String? // NEW: Detalhes do motivo da perda
 
   // New fields for advanced features
-  dealValue       Float?     @default(0)
-  probability     Float?     @default(0)
-  stageEnteredAt  DateTime?
-  conversionValue Float?     @default(0)
-  adCampaignId    String?
-  conversionTracked Boolean  @default(false)
+  dealValue         Float?    @default(0)
+  probability       Float?    @default(0)
+  stageEnteredAt    DateTime?
+  conversionValue   Float?    @default(0)
+  adCampaignId      String?
+  conversionTracked Boolean   @default(false)
 
   // Existing relations
   owner      User?      @relation("LeadOwner", fields: [ownerId], references: [id])
@@ -103,31 +110,34 @@ model Lead {
   tasks      Task[]
 
   // New relations
-  conversations          Conversation[]
-  workflowExecutions     WorkflowExecution[]
-  calendarEvents         CalendarEvent[]
-  chatRooms              ChatRoom[]
-  campaignRecipients     CampaignRecipient[]
-  salesCelebrations      SalesCelebration[]
-  whatsappConversations  WhatsAppConversation[]
-  tagAssignments         LeadTagAssignment[]
-  opportunities          Opportunity[]
+  conversations         Conversation[]
+  workflowExecutions    WorkflowExecution[]
+  calendarEvents        CalendarEvent[]
+  chatRooms             ChatRoom[]
+  campaignRecipients    CampaignRecipient[]
+  salesCelebrations     SalesCelebration[]
+  whatsappConversations WhatsAppConversation[]
+  tagAssignments        LeadTagAssignment[]
+  opportunities         Opportunity[]
 
   // Email Marketing Relations
-  emailRecipients        EmailRecipient[]       @relation("EmailLeadRecipient")
-  emailUnsubscribes      EmailUnsubscribe[]     @relation("EmailLeadUnsubscribe")
+  emailRecipients         EmailRecipient[]         @relation("EmailLeadRecipient")
+  emailUnsubscribes       EmailUnsubscribe[]       @relation("EmailLeadUnsubscribe")
   emailWorkflowExecutions EmailWorkflowExecution[] @relation("EmailWorkflowLead")
+
+  // Sales Automation Relations
+  scheduledEmails ScheduledEmail[] @relation("ScheduledEmailLead")
 
   @@map("leads")
 }
 
 model Activity {
-  id        String       @id @default(cuid())
+  id        String   @id @default(cuid())
   leadId    String
   userId    String
-  type      String       // CREATED, CONTACTED, EMAIL_SENT, CALL_MADE, etc.
+  type      String // CREATED, CONTACTED, EMAIL_SENT, CALL_MADE, etc.
   payload   String?
-  createdAt DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id])
@@ -136,21 +146,21 @@ model Activity {
 }
 
 model Task {
-  id            String     @id @default(cuid())
-  leadId        String
-  opportunityId String?    // opcional - permite vincular tarefa a oportunidade
-  assigneeId    String
-  creatorId     String
-  title         String
-  description   String?
-  dueAt         DateTime?
-  status        String     @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
-  priority      String     @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  category      String     @default("GENERAL") // CALL, WHATSAPP, EMAIL, MEETING, DOCUMENT, GENERAL
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt @default(now())
-  completedAt   DateTime?
-  statusChangedAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  leadId          String
+  opportunityId   String? // opcional - permite vincular tarefa a oportunidade
+  assigneeId      String
+  creatorId       String
+  title           String
+  description     String?
+  dueAt           DateTime?
+  status          String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  priority        String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  category        String    @default("GENERAL") // CALL, WHATSAPP, EMAIL, MEETING, DOCUMENT, GENERAL
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+  completedAt     DateTime?
+  statusChangedAt DateTime  @default(now())
 
   lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
   opportunity Opportunity? @relation("OpportunityTasks", fields: [opportunityId], references: [id], onDelete: SetNull)
@@ -164,11 +174,11 @@ model Task {
 }
 
 model TaskSubitem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   taskId      String
   title       String
-  completed   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
   completedAt DateTime?
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -177,15 +187,15 @@ model TaskSubitem {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  resource  String
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
   resourceId String?
-  oldValues String?
-  newValues String?
-  metadata  String?
-  createdAt DateTime @default(now())
+  oldValues  String?
+  newValues  String?
+  metadata   String?
+  createdAt  DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id])
 
@@ -193,24 +203,24 @@ model AuditLog {
 }
 
 model WebhookEvent {
-  id        String   @id @default(cuid())
-  type      String
-  payload   String
-  processed Boolean  @default(false)
-  attempts  Int      @default(0)
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  type        String
+  payload     String
+  processed   Boolean   @default(false)
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now())
   processedAt DateTime?
 
   @@map("webhook_events")
 }
 
 model TeamKPI {
-  id          String   @id @default(cuid())
-  date        DateTime
-  metric      String
-  value       Float
-  metadata    String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  date      DateTime
+  metric    String
+  value     Float
+  metadata  String?
+  createdAt DateTime @default(now())
 
   @@unique([date, metric])
   @@map("team_kpis")
@@ -232,7 +242,7 @@ model FeatureFlag {
   name        String   @unique
   description String?
   enabled     Boolean  @default(false)
-  config      String?  // JSON string for additional configuration
+  config      String? // JSON string for additional configuration
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -243,7 +253,7 @@ model FeatureFlag {
 model LeadScoringRule {
   id             String   @id @default(cuid())
   name           String
-  conditionType  String   // 'source', 'utm', 'activity', 'field'
+  conditionType  String // 'source', 'utm', 'activity', 'field'
   conditionValue String
   points         Int
   active         Boolean  @default(true)
@@ -270,10 +280,10 @@ model PipelineStage {
 model MessageTemplate {
   id          String   @id @default(cuid())
   name        String
-  type        String   // 'whatsapp', 'email'
-  subject     String?  // só para email
+  type        String // 'whatsapp', 'email'
+  subject     String? // só para email
   content     String
-  variables   String?  // JSON array de variáveis disponíveis
+  variables   String? // JSON array de variáveis disponíveis
   active      Boolean  @default(true)
   createdById String
   createdAt   DateTime @default(now())
@@ -286,13 +296,13 @@ model MessageTemplate {
 
 // 4. Conversations
 model Conversation {
-  id             String   @id @default(cuid())
-  leadId         String
-  type           String   // 'whatsapp', 'email'
-  status         String   @default("OPEN") // 'OPEN', 'CLOSED', 'PENDING'
-  assigneeId     String?
-  lastMessageAt  DateTime?
-  createdAt      DateTime @default(now())
+  id            String    @id @default(cuid())
+  leadId        String
+  type          String // 'whatsapp', 'email'
+  status        String    @default("OPEN") // 'OPEN', 'CLOSED', 'PENDING'
+  assigneeId    String?
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
 
   lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   assignee User?     @relation(fields: [assigneeId], references: [id])
@@ -305,10 +315,10 @@ model Conversation {
 model Message {
   id             String   @id @default(cuid())
   conversationId String
-  type           String   // 'incoming', 'outgoing'
+  type           String // 'incoming', 'outgoing'
   content        String
-  metadata       String?  // JSON attachments, read status, etc
-  sentById       String?  // user_id if outgoing
+  metadata       String? // JSON attachments, read status, etc
+  sentById       String? // user_id if outgoing
   sentAt         DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -322,8 +332,8 @@ model Workflow {
   id            String   @id @default(cuid())
   name          String
   description   String?
-  triggerType   String   // 'lead_created', 'status_changed', 'time_based'
-  triggerConfig String?  // JSON
+  triggerType   String // 'lead_created', 'status_changed', 'time_based'
+  triggerConfig String? // JSON
   active        Boolean  @default(true)
   createdById   String
   createdAt     DateTime @default(now())
@@ -372,7 +382,7 @@ model CalendarEvent {
   description    String?
   startTime      DateTime
   endTime        DateTime
-  attendeeEmails String?  // JSON
+  attendeeEmails String? // JSON
   googleMeetLink String?
   googleEventId  String?
   status         String   @default("SCHEDULED") // 'SCHEDULED', 'COMPLETED', 'CANCELLED'
@@ -402,7 +412,7 @@ model HeatmapSession {
 model HeatmapEvent {
   id              String   @id @default(cuid())
   sessionId       String
-  eventType       String   // 'click', 'move', 'scroll'
+  eventType       String // 'click', 'move', 'scroll'
   xPosition       Int?
   yPosition       Int?
   elementSelector String?
@@ -417,13 +427,13 @@ model HeatmapEvent {
 model ChatRoom {
   id          String   @id @default(cuid())
   name        String?
-  type        String   // 'direct', 'group', 'lead_discussion'
-  leadId      String?  // se for discussão sobre lead específico
+  type        String // 'direct', 'group', 'lead_discussion'
+  leadId      String? // se for discussão sobre lead específico
   createdById String
   createdAt   DateTime @default(now())
 
-  lead         Lead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  createdBy    User               @relation(fields: [createdById], references: [id])
+  lead         Lead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy    User              @relation(fields: [createdById], references: [id])
   participants ChatParticipant[]
   messages     ChatMessage[]
 
@@ -451,8 +461,8 @@ model ChatMessage {
   userId      String
   content     String
   messageType String   @default("text") // 'text', 'image', 'file'
-  mentions    String?  // JSON array de user_ids mencionados
-  replyTo     String?  // id da mensagem que está respondendo
+  mentions    String? // JSON array de user_ids mencionados
+  replyTo     String? // id da mensagem que está respondendo
   sentAt      DateTime @default(now())
 
   room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -463,16 +473,16 @@ model ChatMessage {
 
 // 15. Email Campaigns
 model EmailCampaign {
-  id           String    @id @default(cuid())
-  name         String
-  subject      String
-  content      String
-  templateId   String?
-  status       String    @default("DRAFT") // 'DRAFT', 'SCHEDULED', 'SENDING', 'SENT'
-  scheduledAt  DateTime?
-  sentAt       DateTime?
-  createdById  String
-  createdAt    DateTime  @default(now())
+  id          String    @id @default(cuid())
+  name        String
+  subject     String
+  content     String
+  templateId  String?
+  status      String    @default("DRAFT") // 'DRAFT', 'SCHEDULED', 'SENDING', 'SENT'
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
 
   template   MessageTemplate?    @relation(fields: [templateId], references: [id])
   createdBy  User                @relation(fields: [createdById], references: [id])
@@ -516,25 +526,25 @@ model SalesCelebration {
 
 // WhatsApp Integration Models
 model WhatsAppAccount {
-  id                String              @id @default(cuid())
-  userId            String
-  phoneNumber       String              @unique
-  displayName       String?
-  profilePicture    String?
-  qrCode            String?             // QR code para conexão
-  status            String              @default("DISCONNECTED") // DISCONNECTED, CONNECTING, CONNECTED, ERROR
-  sessionData       String?             // JSON com dados da sessão
-  isBusinessApi     Boolean             @default(false)
-  businessApiToken  String?
+  id                 String    @id @default(cuid())
+  userId             String
+  phoneNumber        String    @unique
+  displayName        String?
+  profilePicture     String?
+  qrCode             String? // QR code para conexão
+  status             String    @default("DISCONNECTED") // DISCONNECTED, CONNECTING, CONNECTED, ERROR
+  sessionData        String? // JSON com dados da sessão
+  isBusinessApi      Boolean   @default(false)
+  businessApiToken   String?
   webhookVerifyToken String?
-  lastHeartbeat     DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  lastHeartbeat      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversations WhatsAppConversation[]
-  messages     WhatsAppMessage[]
-  flowExecutions FlowExecution[]
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations    WhatsAppConversation[]
+  messages         WhatsAppMessage[]
+  flowExecutions   FlowExecution[]
   campaignMessages CampaignMessage[]
   audioGenerations AudioGeneration[]
 
@@ -542,50 +552,50 @@ model WhatsAppAccount {
 }
 
 model WhatsAppConversation {
-  id               String   @id @default(cuid())
-  accountId        String
-  contactNumber    String   // Número do contato
-  contactName      String?  // Nome do contato
-  profilePicture   String?  // URL ou base64 da foto de perfil
-  isGroup          Boolean  @default(false) // Indica se é um grupo
-  leadId           String?  // Lead associado
-  status           String   @default("ACTIVE") // ACTIVE, ARCHIVED, BLOCKED
-  lastMessageAt    DateTime?
-  unreadCount      Int      @default(0)
-  assignedUserId   String?  // Usuário responsável pela conversa
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id             String    @id @default(cuid())
+  accountId      String
+  contactNumber  String // Número do contato
+  contactName    String? // Nome do contato
+  profilePicture String? // URL ou base64 da foto de perfil
+  isGroup        Boolean   @default(false) // Indica se é um grupo
+  leadId         String? // Lead associado
+  status         String    @default("ACTIVE") // ACTIVE, ARCHIVED, BLOCKED
+  lastMessageAt  DateTime?
+  unreadCount    Int       @default(0)
+  assignedUserId String? // Usuário responsável pela conversa
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  account       WhatsAppAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  lead          Lead?             @relation(fields: [leadId], references: [id])
-  assignedUser  User?             @relation(fields: [assignedUserId], references: [id])
-  messages      WhatsAppMessage[]
+  account        WhatsAppAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  lead           Lead?             @relation(fields: [leadId], references: [id])
+  assignedUser   User?             @relation(fields: [assignedUserId], references: [id])
+  messages       WhatsAppMessage[]
   flowExecutions FlowExecution[]
-  contactTags   ContactTag[]
+  contactTags    ContactTag[]
 
   @@unique([accountId, contactNumber])
   @@map("whatsapp_conversations")
 }
 
 model WhatsAppMessage {
-  id             String   @id @default(cuid())
-  accountId      String
-  conversationId String
-  whatsappId     String?  // ID único da mensagem no WhatsApp
-  direction      String   // INBOUND, OUTBOUND
-  messageType    String   // TEXT, IMAGE, AUDIO, VIDEO, DOCUMENT, LOCATION, CONTACT
-  content        String?  // Texto da mensagem
-  mediaUrl       String?  // URL do arquivo de mídia
-  mediaType      String?  // image/jpeg, audio/ogg, etc
-  mediaSize      Int?     // Tamanho do arquivo em bytes
-  caption        String?  // Legenda para mídia
+  id              String   @id @default(cuid())
+  accountId       String
+  conversationId  String
+  whatsappId      String? // ID único da mensagem no WhatsApp
+  direction       String // INBOUND, OUTBOUND
+  messageType     String // TEXT, IMAGE, AUDIO, VIDEO, DOCUMENT, LOCATION, CONTACT
+  content         String? // Texto da mensagem
+  mediaUrl        String? // URL do arquivo de mídia
+  mediaType       String? // image/jpeg, audio/ogg, etc
+  mediaSize       Int? // Tamanho do arquivo em bytes
+  caption         String? // Legenda para mídia
   quotedMessageId String? // ID da mensagem citada
-  status         String   @default("PENDING") // PENDING, SENT, DELIVERED, READ, FAILED
-  fromNumber     String   // Número que enviou
-  toNumber       String   // Número que recebeu
-  timestamp      DateTime
-  sentById       String?  // ID do usuário que enviou (se outbound)
-  createdAt      DateTime @default(now())
+  status          String   @default("PENDING") // PENDING, SENT, DELIVERED, READ, FAILED
+  fromNumber      String // Número que enviou
+  toNumber        String // Número que recebeu
+  timestamp       DateTime
+  sentById        String? // ID do usuário que enviou (se outbound)
+  createdAt       DateTime @default(now())
 
   account      WhatsAppAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -595,21 +605,21 @@ model WhatsAppMessage {
 }
 
 model WhatsAppTemplate {
-  id           String   @id @default(cuid())
-  name         String
-  category     String   // MARKETING, UTILITY, AUTHENTICATION
-  language     String   @default("pt_BR")
-  content      String   // Template com variáveis {{1}}, {{2}}
-  headerType   String?  // TEXT, IMAGE, VIDEO, DOCUMENT
+  id            String   @id @default(cuid())
+  name          String
+  category      String // MARKETING, UTILITY, AUTHENTICATION
+  language      String   @default("pt_BR")
+  content       String // Template com variáveis {{1}}, {{2}}
+  headerType    String? // TEXT, IMAGE, VIDEO, DOCUMENT
   headerContent String? // Conteúdo do cabeçalho
-  footerText   String?  // Texto do rodapé
-  buttons      String?  // JSON com botões
-  variables    String?  // JSON com descrição das variáveis
-  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  whatsappId   String?  // ID do template no WhatsApp Business API
-  createdById  String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  footerText    String? // Texto do rodapé
+  buttons       String? // JSON com botões
+  variables     String? // JSON com descrição das variáveis
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  whatsappId    String? // ID do template no WhatsApp Business API
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   createdBy User @relation(fields: [createdById], references: [id])
 
@@ -617,14 +627,14 @@ model WhatsAppTemplate {
 }
 
 model WhatsAppWebhook {
-  id            String   @id @default(cuid())
-  event         String   // message, status, etc
-  payload       String   // JSON completo do webhook
-  processed     Boolean  @default(false)
-  processedAt   DateTime?
-  errorMessage  String?
-  attempts      Int      @default(0)
-  createdAt     DateTime @default(now())
+  id           String    @id @default(cuid())
+  event        String // message, status, etc
+  payload      String // JSON completo do webhook
+  processed    Boolean   @default(false)
+  processedAt  DateTime?
+  errorMessage String?
+  attempts     Int       @default(0)
+  createdAt    DateTime  @default(now())
 
   @@map("whatsapp_webhooks")
 }
@@ -636,12 +646,12 @@ model MessageFlow {
   name         String
   description  String?
   isActive     Boolean  @default(true)
-  triggerType  String   // KEYWORD, NEW_CONTACT, TIME_BASED, MANUAL
-  triggerValue String?  // keyword or time expression
+  triggerType  String // KEYWORD, NEW_CONTACT, TIME_BASED, MANUAL
+  triggerValue String? // keyword or time expression
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   steps      FlowStep[]
   executions FlowExecution[]
   triggers   FlowTrigger[]
@@ -654,17 +664,17 @@ model FlowStep {
   id           String   @id @default(cuid())
   flowId       String
   stepOrder    Int
-  stepType     String   // MESSAGE, DELAY, CONDITION, ACTION
-  messageType  String?  // TEXT, AUDIO, IMAGE, VIDEO, DOCUMENT
+  stepType     String // MESSAGE, DELAY, CONDITION, ACTION
+  messageType  String? // TEXT, AUDIO, IMAGE, VIDEO, DOCUMENT
   content      String?
   mediaUrl     String?
   delayMinutes Int      @default(0)
-  conditions   String?  // JSON for conditional logic
-  actions      String?  // JSON for actions like tags, assignments
+  conditions   String? // JSON for conditional logic
+  actions      String? // JSON for actions like tags, assignments
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  flow            MessageFlow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flow              MessageFlow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
   currentExecutions FlowExecution[] @relation("CurrentStep")
 
   @@index([flowId, stepOrder])
@@ -680,7 +690,7 @@ model FlowExecution {
   status         String    @default("RUNNING") // RUNNING, COMPLETED, PAUSED, FAILED
   startedAt      DateTime  @default(now())
   completedAt    DateTime?
-  data           String?   // JSON for execution context
+  data           String? // JSON for execution context
 
   flow         MessageFlow          @relation(fields: [flowId], references: [id], onDelete: Cascade)
   conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -698,7 +708,7 @@ model FlowTrigger {
   name         String
   triggerValue String?
   isActive     Boolean  @default(true)
-  config       String?  // JSON string for trigger configuration
+  config       String? // JSON string for trigger configuration
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -712,10 +722,10 @@ model CampaignMessage {
   id             String    @id @default(cuid())
   accountId      String
   campaignName   String
-  messageType    String    // TEXT, AUDIO, IMAGE, VIDEO
+  messageType    String // TEXT, AUDIO, IMAGE, VIDEO
   content        String?
   mediaUrl       String?
-  targetAudience String?   // JSON for filtering criteria
+  targetAudience String? // JSON for filtering criteria
   scheduledAt    DateTime?
   status         String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, COMPLETED, FAILED
   sentCount      Int       @default(0)
@@ -760,29 +770,29 @@ model AudioGeneration {
 
 // Lead Tags System
 model LeadTag {
-  id         String   @id @default(cuid())
-  name       String   @unique
-  color      String   @default("#3B82F6")
-  category   String?  // e.g., "source", "interest", "priority"
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#3B82F6")
+  category  String? // e.g., "source", "interest", "priority"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  leadTags   LeadTagAssignment[]
+  leadTags LeadTagAssignment[]
 
   @@map("lead_tags")
 }
 
 model LeadTagAssignment {
-  id       String   @id @default(cuid())
-  leadId   String
-  tagId    String
+  id         String   @id @default(cuid())
+  leadId     String
+  tagId      String
   assignedAt DateTime @default(now())
   assignedBy String?
 
-  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tag      LeadTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  assigner User?    @relation(fields: [assignedBy], references: [id])
+  lead     Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag      LeadTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assigner User?   @relation(fields: [assignedBy], references: [id])
 
   @@unique([leadId, tagId])
   @@index([leadId])
@@ -793,26 +803,30 @@ model LeadTagAssignment {
 // ===== OPPORTUNITIES / DEALS SYSTEM =====
 
 model Opportunity {
-  id                String    @id @default(cuid())
-  leadId            String
-  ownerId           String
-  stage             String    @default("NEW") // NEW, QUALIFICATION, DISCOVERY, PROPOSAL, NEGOTIATION, WON, LOST
-  amountBr          Float?    // nullable até PROPOSAL; obrigatório a partir de PROPOSAL
-  currency          String    @default("BRL")
-  probability       Int       @default(0) // 0..100, auto por etapa mas editável por gestor
-  expectedCloseAt   DateTime?
-  discountPct       Float?    // percentual de desconto
-  costEstimatedBr   Float?    // custo estimado
-  lostReason        String?   // obrigatório quando stage = LOST
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  closedAt          DateTime? // quando WON
+  id              String    @id @default(cuid())
+  leadId          String
+  ownerId         String
+  stage           String    @default("NEW") // NEW, QUALIFICATION, DISCOVERY, PROPOSAL, NEGOTIATION, WON, LOST
+  amountBr        Float? // nullable até PROPOSAL; obrigatório a partir de PROPOSAL
+  currency        String    @default("BRL")
+  probability     Int       @default(0) // 0..100, auto por etapa mas editável por gestor
+  expectedCloseAt DateTime?
+  discountPct     Float? // percentual de desconto
+  costEstimatedBr Float? // custo estimado
+  lostReason      String? // obrigatório quando stage = LOST
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  closedAt        DateTime? // quando WON
 
-  lead          Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  owner         User                @relation("OpportunityOwner", fields: [ownerId], references: [id])
-  items         OpportunityItem[]
-  stageHistory  StageHistory[]
-  tasks         Task[]              @relation("OpportunityTasks")
+  lead         Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  owner        User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
+  items        OpportunityItem[]
+  stageHistory StageHistory[]
+  tasks        Task[]            @relation("OpportunityTasks")
+
+  // Sales Automation Relations
+  salesActivities SalesActivity[]  @relation("OpportunitySalesActivities")
+  scheduledEmails ScheduledEmail[] @relation("ScheduledEmailOpportunity")
 
   @@index([leadId])
   @@index([ownerId])
@@ -822,12 +836,12 @@ model Opportunity {
 }
 
 model OpportunityItem {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
   opportunityId String
   productName   String
-  qty           Int     @default(1)
+  qty           Int      @default(1)
   unitPriceBr   Float
-  subtotalBr    Float   // computed or persisted
+  subtotalBr    Float // computed or persisted
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -840,7 +854,7 @@ model OpportunityItem {
 model StageHistory {
   id            String   @id @default(cuid())
   opportunityId String
-  stageFrom     String?  // null se inicial
+  stageFrom     String? // null se inicial
   stageTo       String
   changedBy     String
   changedAt     DateTime @default(now())
@@ -856,7 +870,7 @@ model StageHistory {
 model StageProbability {
   id          String @id @default(cuid())
   stage       String @unique
-  probability Int    // 0..100
+  probability Int // 0..100
 
   @@map("stage_probabilities")
 }
@@ -865,9 +879,9 @@ model RevenueTarget {
   id          String   @id @default(cuid())
   year        Int
   month       Int
-  targetValue Float    // Meta de receita para o mês
-  userId      String?  // null = meta geral, preenchido = meta individual
-  teamId      String?  // para metas de equipe (futuro)
+  targetValue Float // Meta de receita para o mês
+  userId      String? // null = meta geral, preenchido = meta individual
+  teamId      String? // para metas de equipe (futuro)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -885,50 +899,51 @@ model EmailTemplate {
   name        String
   description String?
   subject     String
-  htmlContent String   // HTML do email
-  textContent String?  // Versão texto alternativa
-  variables   String?  // JSON com variáveis disponíveis como {{nome}}, {{empresa}}
+  htmlContent String // HTML do email
+  textContent String? // Versão texto alternativa
+  variables   String? // JSON com variáveis disponíveis como {{nome}}, {{empresa}}
   category    String   @default("MARKETING") // MARKETING, TRANSACTIONAL, WORKFLOW
   active      Boolean  @default(true)
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy     User           @relation("EmailTemplateCreator", fields: [createdById], references: [id])
-  campaigns     EmailCampaignNew[]
-  workflowSteps EmailWorkflowStep[]
+  createdBy            User                  @relation("EmailTemplateCreator", fields: [createdById], references: [id])
+  campaigns            EmailCampaignNew[]
+  workflowSteps        EmailWorkflowStep[]
+  salesAutomationRules SalesAutomationRule[] @relation("SalesAutomationTemplate")
 
   @@map("email_templates")
 }
 
 model EmailCampaignNew {
-  id             String    @id @default(cuid())
-  name           String
-  subject        String
-  templateId     String?
-  status         String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, PAUSED, CANCELLED
-  type           String    @default("MARKETING") // MARKETING, TRANSACTIONAL, WORKFLOW
-  scheduledAt    DateTime?
-  sentAt         DateTime?
-  completedAt    DateTime?
-  totalRecipients Int      @default(0)
-  sentCount      Int       @default(0)
-  deliveredCount Int       @default(0)
-  openedCount    Int       @default(0)
-  clickedCount   Int       @default(0)
-  bouncedCount   Int       @default(0)
-  unsubscribedCount Int    @default(0)
-  segmentConfig  String?   // JSON com critérios de segmentação
-  createdById    String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  subject           String
+  templateId        String?
+  status            String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, PAUSED, CANCELLED
+  type              String    @default("MARKETING") // MARKETING, TRANSACTIONAL, WORKFLOW
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  completedAt       DateTime?
+  totalRecipients   Int       @default(0)
+  sentCount         Int       @default(0)
+  deliveredCount    Int       @default(0)
+  openedCount       Int       @default(0)
+  clickedCount      Int       @default(0)
+  bouncedCount      Int       @default(0)
+  unsubscribedCount Int       @default(0)
+  segmentConfig     String? // JSON com critérios de segmentação
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  template      EmailTemplate?         @relation(fields: [templateId], references: [id])
-  createdBy     User                   @relation("EmailCampaignCreator", fields: [createdById], references: [id])
-  recipients    EmailRecipient[]
-  opens         EmailOpen[]
-  clicks        EmailClick[]
-  unsubscribes  EmailUnsubscribe[]
+  template     EmailTemplate?     @relation(fields: [templateId], references: [id])
+  createdBy    User               @relation("EmailCampaignCreator", fields: [createdById], references: [id])
+  recipients   EmailRecipient[]
+  opens        EmailOpen[]
+  clicks       EmailClick[]
+  unsubscribes EmailUnsubscribe[]
 
   @@index([status])
   @@index([scheduledAt])
@@ -936,24 +951,24 @@ model EmailCampaignNew {
 }
 
 model EmailRecipient {
-  id           String    @id @default(cuid())
-  campaignId   String
-  leadId       String
-  email        String
-  status       String    @default("PENDING") // PENDING, SENT, DELIVERED, BOUNCED, FAILED
-  sentAt       DateTime?
-  deliveredAt  DateTime?
-  lastOpenedAt DateTime?
-  lastClickedAt DateTime?
-  openCount    Int       @default(0)
-  clickCount   Int       @default(0)
-  bounceReason String?
+  id             String    @id @default(cuid())
+  campaignId     String
+  leadId         String
+  email          String
+  status         String    @default("PENDING") // PENDING, SENT, DELIVERED, BOUNCED, FAILED
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  lastOpenedAt   DateTime?
+  lastClickedAt  DateTime?
+  openCount      Int       @default(0)
+  clickCount     Int       @default(0)
+  bounceReason   String?
   unsubscribedAt DateTime?
 
-  campaign     EmailCampaignNew    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  lead         Lead               @relation("EmailLeadRecipient", fields: [leadId], references: [id], onDelete: Cascade)
-  opens        EmailOpen[]
-  clicks       EmailClick[]
+  campaign EmailCampaignNew @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     Lead             @relation("EmailLeadRecipient", fields: [leadId], references: [id], onDelete: Cascade)
+  opens    EmailOpen[]
+  clicks   EmailClick[]
 
   @@unique([campaignId, leadId])
   @@index([email])
@@ -962,15 +977,15 @@ model EmailRecipient {
 }
 
 model EmailOpen {
-  id           String   @id @default(cuid())
-  campaignId   String
-  recipientId  String
-  ipAddress    String?
-  userAgent    String?
-  openedAt     DateTime @default(now())
+  id          String   @id @default(cuid())
+  campaignId  String
+  recipientId String
+  ipAddress   String?
+  userAgent   String?
+  openedAt    DateTime @default(now())
 
-  campaign     EmailCampaignNew @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  recipient    EmailRecipient   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  campaign  EmailCampaignNew @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipient EmailRecipient   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([openedAt])
@@ -978,17 +993,17 @@ model EmailOpen {
 }
 
 model EmailClick {
-  id           String   @id @default(cuid())
-  campaignId   String
-  recipientId  String
-  url          String
-  linkText     String?
-  ipAddress    String?
-  userAgent    String?
-  clickedAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  campaignId  String
+  recipientId String
+  url         String
+  linkText    String?
+  ipAddress   String?
+  userAgent   String?
+  clickedAt   DateTime @default(now())
 
-  campaign     EmailCampaignNew @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  recipient    EmailRecipient   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  campaign  EmailCampaignNew @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipient EmailRecipient   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([clickedAt])
@@ -1004,8 +1019,8 @@ model EmailUnsubscribe {
   unsubscribedAt DateTime @default(now())
   ipAddress      String?
 
-  campaign       EmailCampaignNew? @relation(fields: [campaignId], references: [id])
-  lead           Lead              @relation("EmailLeadUnsubscribe", fields: [leadId], references: [id], onDelete: Cascade)
+  campaign EmailCampaignNew? @relation(fields: [campaignId], references: [id])
+  lead     Lead              @relation("EmailLeadUnsubscribe", fields: [leadId], references: [id], onDelete: Cascade)
 
   @@unique([email])
   @@index([unsubscribedAt])
@@ -1013,17 +1028,17 @@ model EmailUnsubscribe {
 }
 
 model EmailWorkflow {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  triggerType String   // LEAD_CREATED, STATUS_CHANGED, TAG_ADDED, DATE_BASED, MANUAL
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  triggerType   String // LEAD_CREATED, STATUS_CHANGED, TAG_ADDED, DATE_BASED, MANUAL
   triggerConfig String? // JSON com configuração do trigger
-  active      Boolean  @default(true)
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active        Boolean  @default(true)
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  createdBy  User                    @relation("EmailWorkflowCreator", fields: [createdById], references: [id])
+  createdBy  User                     @relation("EmailWorkflowCreator", fields: [createdById], references: [id])
   steps      EmailWorkflowStep[]
   executions EmailWorkflowExecution[]
 
@@ -1031,35 +1046,37 @@ model EmailWorkflow {
 }
 
 model EmailWorkflowStep {
-  id          String   @id @default(cuid())
-  workflowId  String
-  templateId  String?
-  stepOrder   Int
-  delayHours  Int      @default(0) // Delay antes de enviar
-  conditions  String?  // JSON com condições para envio
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  workflowId String
+  templateId String?
+  stepOrder  Int
+  delayHours Int      @default(0) // Delay antes de enviar
+  conditions String? // JSON com condições para envio
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
 
-  workflow    EmailWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  template    EmailTemplate? @relation(fields: [templateId], references: [id])
+  workflow EmailWorkflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  template EmailTemplate? @relation(fields: [templateId], references: [id])
 
   @@index([workflowId, stepOrder])
   @@map("email_workflow_steps")
 }
 
 model EmailWorkflowExecution {
-  id           String    @id @default(cuid())
-  workflowId   String
-  leadId       String
-  currentStep  Int       @default(1)
-  status       String    @default("RUNNING") // RUNNING, COMPLETED, PAUSED, FAILED
-  startedAt    DateTime  @default(now())
-  completedAt  DateTime?
-  nextStepAt   DateTime?
-  data         String?   // JSON com dados do contexto da execução
+  id          String    @id @default(cuid())
+  workflowId  String
+  leadId      String
+  currentStep Int       @default(1)
+  status      String    @default("RUNNING") // RUNNING, COMPLETED, PAUSED, FAILED
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  nextStepAt  DateTime?
+  data        String? // JSON com dados do contexto da execução
+  error       String? // Mensagem de erro quando falha
+  logs        String? // JSON com logs detalhados da execução
 
-  workflow     EmailWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  lead         Lead          @relation("EmailWorkflowLead", fields: [leadId], references: [id], onDelete: Cascade)
+  workflow EmailWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  lead     Lead          @relation("EmailWorkflowLead", fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([workflowId])
   @@index([leadId])
@@ -1071,14 +1088,140 @@ model EmailSegment {
   id          String   @id @default(cuid())
   name        String
   description String?
-  conditions  String   // JSON com critérios de segmentação
+  conditions  String // JSON com critérios de segmentação
   dynamic     Boolean  @default(true) // Se é dinâmico (atualiza automaticamente)
   leadCount   Int      @default(0)
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy   User     @relation("EmailSegmentCreator", fields: [createdById], references: [id])
+  createdBy User @relation("EmailSegmentCreator", fields: [createdById], references: [id])
 
   @@map("email_segments")
+}
+
+// ===== SALES AUTOMATION SYSTEM =====
+
+model SalesAutomationRule {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  triggerType  String // STAGE_CHANGE, OPPORTUNITY_CREATED, TIME_BASED, VALUE_THRESHOLD
+  triggerValue String // Nome do estágio, valor mínimo, etc
+  templateId   String?
+  delayHours   Int      @default(0)
+  conditions   String? // JSON com condições adicionais
+  active       Boolean  @default(true)
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  template  EmailTemplate? @relation("SalesAutomationTemplate", fields: [templateId], references: [id])
+  createdBy User           @relation("SalesAutomationCreator", fields: [createdById], references: [id])
+
+  @@map("sales_automation_rules")
+}
+
+model SalesTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  type        String // PROPOSAL, FOLLOW_UP, NEGOTIATION, CLOSING
+  stage       String? // Estágio específico da oportunidade
+  subject     String
+  content     String // HTML content
+  generatePdf Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation("SalesTemplateCreator", fields: [createdById], references: [id])
+
+  @@map("sales_templates")
+}
+
+model SalesActivity {
+  id            String   @id @default(cuid())
+  opportunityId String
+  type          String // PROPOSAL_SENT, FOLLOW_UP_SENT, STAGE_AUTOMATION, EMAIL_OPENED, etc
+  description   String
+  metadata      String? // JSON com dados adicionais
+  createdAt     DateTime @default(now())
+
+  opportunity Opportunity @relation("OpportunitySalesActivities", fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+  @@index([type])
+  @@map("sales_activities")
+}
+
+model ScheduledEmail {
+  id               String    @id @default(cuid())
+  to               String
+  subject          String
+  html             String
+  attachments      String? // JSON array of attachments
+  leadId           String?
+  opportunityId    String?
+  automationRuleId String?
+  type             String    @default("SALES") // SALES, MARKETING, TRANSACTIONAL
+  status           String    @default("PENDING") // PENDING, SENT, FAILED
+  scheduledAt      DateTime
+  sentAt           DateTime?
+  error            String?
+  createdAt        DateTime  @default(now())
+
+  lead        Lead?        @relation("ScheduledEmailLead", fields: [leadId], references: [id])
+  opportunity Opportunity? @relation("ScheduledEmailOpportunity", fields: [opportunityId], references: [id])
+
+  @@index([scheduledAt, status])
+  @@index([opportunityId])
+  @@map("scheduled_emails")
+}
+
+// ===== WEBHOOKS SYSTEM =====
+
+model Webhook {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  events      String // JSON array of event types: ["opportunity.created", "opportunity.stage_changed", "opportunity.won", "opportunity.lost"]
+  secret      String? // Secret for webhook signature validation
+  active      Boolean  @default(true)
+  retryCount  Int      @default(3)
+  timeout     Int      @default(30) // Timeout in seconds
+  headers     String? // JSON object with custom headers
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy  User              @relation("WebhookCreator", fields: [createdById], references: [id])
+  deliveries WebhookDelivery[]
+
+  @@index([active])
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id           String    @id @default(cuid())
+  webhookId    String
+  event        String // "opportunity.created", "opportunity.stage_changed", etc.
+  payload      String // JSON payload sent
+  responseCode Int? // HTTP response code
+  response     String? // Response body
+  error        String? // Error message if failed
+  status       String    @default("PENDING") // PENDING, SUCCESS, FAILED, RETRY
+  attempt      Int       @default(1)
+  deliveredAt  DateTime?
+  nextRetryAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([nextRetryAt])
+  @@index([event])
+  @@map("webhook_deliveries")
 }

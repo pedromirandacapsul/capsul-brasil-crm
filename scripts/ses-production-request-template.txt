@@ -1,0 +1,98 @@
+# 📋 TEMPLATE PARA SOLICITAÇÃO DE PRODUÇÃO SES
+
+Copie e cole este texto no formulário "Request production access" do Amazon SES:
+
+---
+
+## Use Case
+Transactional
+
+## Website URL
+https://capsul.com.br
+
+## Use Case Description (detalhado)
+Estamos implementando um sistema CRM empresarial para nossa empresa Capsul Brasil, que oferece soluções de gestão para pequenas e médias empresas.
+
+O sistema enviará emails transacionais essenciais para o funcionamento do negócio:
+
+**Emails Transacionais:**
+- Boas-vindas para novos clientes cadastrados
+- Confirmações de agendamentos e reuniões
+- Notificações de mudanças de status em oportunidades
+- Follow-ups automatizados baseados no comportamento do cliente
+- Lembretes de renovação de contratos
+- Relatórios mensais de performance
+
+**Emails de Marketing (com opt-in):**
+- Newsletter mensal para clientes existentes (apenas opt-in confirmado)
+- Anúncios de novos recursos e atualizações do sistema
+- Convites para webinars e eventos da empresa
+
+**Controles de Qualidade:**
+- Sistema de opt-in duplo para marketing
+- Unsubscribe em um clique
+- Validação de emails antes do envio
+- Monitoramento automático de bounces e complaints
+- Lista de supressão automática
+- Processo de limpeza mensal da base
+
+Nossa empresa atende principalmente clientes corporativos no Brasil e precisamos de alta confiabilidade na entrega de emails para manter a comunicação profissional.
+
+## Additional Contact Information
+Email: contato@capsul.com.br
+Empresa: Capsul Brasil Ltda
+Telefone: +55 11 99999-9999
+
+## Preferred Contact Language
+Portuguese
+
+## How will you handle bounces and complaints?
+Implementamos um sistema robusto de gestão de bounces e complaints:
+
+**Bounce Management:**
+- Monitoramento automático via SNS webhooks
+- Hard bounces: remoção imediata da lista
+- Soft bounces: retry por 3 dias, depois remoção
+- Meta: manter bounce rate abaixo de 2%
+
+**Complaint Management:**
+- Unsubscribe automático de qualquer complaint
+- Análise de padrões para identificar problemas
+- Revisão mensal de templates e práticas
+- Meta: manter complaint rate abaixo de 0.05%
+
+**Conformidade:**
+- Compliance total com LGPD (Lei Geral de Proteção de Dados)
+- Headers SPF, DKIM e DMARC configurados
+- Opt-in explícito para todos os envios de marketing
+- Logs detalhados de todas as ações
+
+**Monitoramento:**
+- Dashboard em tempo real de métricas
+- Alertas automáticos se métricas degradarem
+- Revisão semanal de performance
+- Auditorias mensais de qualidade
+
+## Expected Sending Volume
+Volume inicial esperado: 5.000-10.000 emails por dia
+Volume máximo esperado: 25.000 emails por dia (durante campanhas)
+
+## Mail Type
+Both (Transactional and Marketing)
+
+---
+
+# 🎯 APÓS SUBMETER
+
+1. **Aguardar**: 12-48 horas para resposta
+2. **Monitorar**: Email de notificação da AWS
+3. **Responder**: Rapidamente se AWS solicitar informações adicionais
+4. **Configurar**: Credenciais assim que aprovado
+
+# ⚠️ DICAS IMPORTANTES
+
+- Seja específico e profissional
+- Mencione compliance e boas práticas
+- Destaque que é uso corporativo legítimo
+- Não exagere nos volumes iniciais
+- Responda emails da AWS imediatamente

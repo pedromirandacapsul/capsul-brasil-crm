@@ -163,12 +163,10 @@ export class EmailWorkflowService {
           workflowId,
           leadId,
           data: JSON.stringify(triggerData || {}),
+          currentStep: 1, // Começar no step 1
           nextStepAt: new Date() // Primeira etapa executa imediatamente
         }
       })
-
-      // Agendar primeiro step
-      await this.scheduleNextStep(execution.id)
 
       console.log('✅ Execução de workflow iniciada:', execution.id)
       return { success: true, execution }
@@ -261,15 +259,38 @@ export class EmailWorkflowService {
       if (emailResult.success) {
         console.log(`📧 Email enviado no step ${currentStep.stepOrder}`)
 
+        // Registrar sucesso nos logs
+        const successLog = {
+          timestamp: new Date().toISOString(),
+          action: 'EMAIL_SENT',
+          step: currentStep.stepOrder,
+          template: currentStep.template.name,
+          recipient: execution.lead.email,
+          status: 'SUCCESS'
+        }
+
         // Avançar para próximo step
-        await this.scheduleNextStep(execution.id)
+        await this.scheduleNextStep(execution.id, successLog)
       } else {
-        // Marcar como falha
+        // Registrar falha detalhada
+        const errorLog = {
+          timestamp: new Date().toISOString(),
+          action: 'EMAIL_SEND_FAILED',
+          step: currentStep.stepOrder,
+          template: currentStep.template.name,
+          recipient: execution.lead.email,
+          error: emailResult.error,
+          status: 'FAILED'
+        }
+
+        // Marcar como falha com detalhes
         await prisma.emailWorkflowExecution.update({
           where: { id: execution.id },
           data: {
             status: 'FAILED',
-            completedAt: new Date()
+            completedAt: new Date(),
+            error: `Falha no step ${currentStep.stepOrder}: ${emailResult.error}`,
+            logs: JSON.stringify([errorLog])
           }
         })
         console.error(`❌ Falha no step ${currentStep.stepOrder}:`, emailResult.error)
@@ -278,12 +299,24 @@ export class EmailWorkflowService {
     } catch (error: any) {
       console.error('❌ Erro ao processar step:', error)
 
-      // Marcar execução como falha
+      // Registrar erro crítico
+      const criticalErrorLog = {
+        timestamp: new Date().toISOString(),
+        action: 'STEP_PROCESSING_ERROR',
+        step: execution.currentStep,
+        error: error.message,
+        stack: error.stack,
+        status: 'CRITICAL_ERROR'
+      }
+
+      // Marcar execução como falha com detalhes do erro
       await prisma.emailWorkflowExecution.update({
         where: { id: execution.id },
         data: {
           status: 'FAILED',
-          completedAt: new Date()
+          completedAt: new Date(),
+          error: `Erro crítico no processamento: ${error.message}`,
+          logs: JSON.stringify([criticalErrorLog])
         }
       })
     }
@@ -292,7 +325,7 @@ export class EmailWorkflowService {
   /**
    * Agendar próximo step
    */
-  private async scheduleNextStep(executionId: string) {
+  private async scheduleNextStep(executionId: string, logEntry?: any) {
     try {
       const execution = await prisma.emailWorkflowExecution.findUnique({
         where: { id: executionId },
@@ -331,13 +364,23 @@ export class EmailWorkflowService {
       const nextStepAt = new Date()
       nextStepAt.setHours(nextStepAt.getHours() + nextStep.delayHours)
 
+      // Preparar dados de atualização
+      const updateData: any = {
+        currentStep: nextStepOrder,
+        nextStepAt
+      }
+
+      // Se há log entry, incluir nos logs
+      if (logEntry) {
+        const currentLogs = execution.logs ? JSON.parse(execution.logs) : []
+        currentLogs.push(logEntry)
+        updateData.logs = JSON.stringify(currentLogs)
+      }
+
       // Atualizar execução
       await prisma.emailWorkflowExecution.update({
         where: { id: executionId },
-        data: {
-          currentStep: nextStepOrder,
-          nextStepAt
-        }
+        data: updateData
       })
 
       console.log(`📅 Próximo step agendado para: ${nextStepAt}`)
@@ -594,3 +637,6 @@ export class EmailWorkflowService {
     }
   }
 }
+
+// Instância única do serviço
+export const emailWorkflowService = new EmailWorkflowService()

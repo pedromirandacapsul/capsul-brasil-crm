@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     if (workflowId) whereClause.workflowId = workflowId
     if (status) whereClause.status = status
 
-    const executions = await prisma.emailWorkflowExecution.findMany({
+    const rawExecutions = await prisma.emailWorkflowExecution.findMany({
       where: whereClause,
       include: {
         workflow: {
@@ -58,6 +58,79 @@ export async function GET(request: NextRequest) {
       take: limit,
       skip: offset
     })
+
+    // Transformar dados para o formato esperado pela interface
+    const executions = await Promise.all(rawExecutions.map(async (execution) => {
+      // Buscar o step atual
+      const currentStepData = await prisma.emailWorkflowStep.findFirst({
+        where: {
+          workflowId: execution.workflowId,
+          stepOrder: execution.currentStep
+        },
+        include: {
+          template: {
+            select: {
+              name: true,
+              subject: true
+            }
+          }
+        }
+      })
+
+      // Mapear status do banco para interface
+      let uiStatus = execution.status
+      switch (execution.status) {
+        case 'RUNNING':
+          uiStatus = execution.nextStepAt && execution.nextStepAt > new Date() ? 'PENDING' : 'RUNNING'
+          break
+        case 'COMPLETED':
+          uiStatus = 'SENT'
+          break
+        case 'FAILED':
+          uiStatus = 'FAILED'
+          break
+        case 'PAUSED':
+          uiStatus = 'PENDING'
+          break
+      }
+
+      // Adicionar informações sobre próximas ações para status pendentes
+      let nextAction = null
+      if (uiStatus === 'PENDING' && execution.nextStepAt) {
+        const nextStepTime = new Date(execution.nextStepAt)
+        const now = new Date()
+        const diffMs = nextStepTime.getTime() - now.getTime()
+        const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+
+        nextAction = {
+          scheduledFor: execution.nextStepAt.toISOString(),
+          hoursRemaining: diffHours > 0 ? diffHours : 0,
+          description: diffHours > 0
+            ? `Próximo email será enviado em ${diffHours} horas`
+            : 'Aguardando processamento'
+        }
+      }
+
+      return {
+        id: execution.id,
+        leadId: execution.leadId,
+        workflowId: execution.workflowId,
+        stepOrder: execution.currentStep,
+        status: uiStatus,
+        scheduledAt: execution.nextStepAt?.toISOString() || execution.startedAt.toISOString(),
+        executedAt: execution.completedAt?.toISOString(),
+        error: execution.error,
+        logs: execution.logs,
+        nextAction: nextAction,
+        lead: execution.lead,
+        workflow: {
+          name: execution.workflow.name
+        },
+        step: currentStepData ? {
+          template: currentStepData.template
+        } : undefined
+      }
+    }))
 
     const total = await prisma.emailWorkflowExecution.count({
       where: whereClause

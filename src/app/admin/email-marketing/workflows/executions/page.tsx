@@ -1,348 +1,437 @@
 'use client'
 
-/**
- * Página de execuções de workflows
- */
-
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Play, Pause, Filter, Clock, User, Mail } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useToast } from '@/components/ui/use-toast'
-import Link from 'next/link'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { CalendarDays, Mail, User, Play, AlertCircle, CheckCircle, ChevronDown, ChevronRight, FileText } from 'lucide-react'
 
 interface WorkflowExecution {
   id: string
-  currentStep: number
-  status: string
-  startedAt: string
-  completedAt?: string
-  nextStepAt?: string
-  workflow: {
-    name: string
+  leadId: string
+  workflowId: string
+  stepOrder: number
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED' | 'RUNNING'
+  scheduledAt: string
+  executedAt?: string
+  error?: string
+  logs?: string
+  nextAction?: {
+    scheduledFor: string
+    hoursRemaining: number
+    description: string
   }
   lead: {
     name: string
     email: string
     company?: string
   }
+  workflow: {
+    name: string
+  }
+  step?: {
+    template: {
+      name: string
+      subject: string
+    }
+  }
 }
 
 export default function WorkflowExecutionsPage() {
   const [executions, setExecutions] = useState<WorkflowExecution[]>([])
   const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [pagination, setPagination] = useState({
-    total: 0,
-    limit: 50,
-    offset: 0,
-    hasMore: false
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [stats, setStats] = useState({
+    pending: 0,
+    sent: 0,
+    failed: 0,
+    total: 0
   })
-  const { toast } = useToast()
 
   useEffect(() => {
-    loadExecutions()
-  }, [statusFilter, pagination.offset])
+    fetchExecutions()
+  }, [])
 
-  const loadExecutions = async () => {
+  const fetchExecutions = async () => {
     try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        limit: pagination.limit.toString(),
-        offset: pagination.offset.toString()
-      })
-
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter)
-      }
-
-      const response = await fetch(`/api/email-marketing/workflows/executions?${params}`)
+      const response = await fetch('/api/email-marketing/workflows/executions')
       const data = await response.json()
 
       if (data.success) {
         setExecutions(data.executions)
-        setPagination(prev => ({
-          ...prev,
-          total: data.pagination.total,
-          hasMore: data.pagination.hasMore
-        }))
-      } else {
-        toast({
-          title: 'Erro',
-          description: data.error || 'Erro ao carregar execuções',
-          variant: 'destructive'
-        })
+
+        // Calcular estatísticas
+        const stats = data.executions.reduce((acc: any, execution: WorkflowExecution) => {
+          acc.total++
+          acc[execution.status.toLowerCase()]++
+          return acc
+        }, { pending: 0, sent: 0, failed: 0, skipped: 0, total: 0 })
+
+        setStats(stats)
       }
     } catch (error) {
-      console.error('Erro ao carregar execuções:', error)
-      toast({
-        title: 'Erro',
-        description: 'Erro de conexão',
-        variant: 'destructive'
-      })
+      console.error('Erro ao buscar execuções:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const controlExecution = async (executionId: string, action: 'pause' | 'resume') => {
-    try {
-      const response = await fetch('/api/email-marketing/workflows/executions', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ executionId, action })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast({
-          title: 'Sucesso',
-          description: data.message
-        })
-        loadExecutions() // Recarregar lista
-      } else {
-        toast({
-          title: 'Erro',
-          description: data.error || 'Erro ao controlar execução',
-          variant: 'destructive'
-        })
-      }
-    } catch (error) {
-      console.error('Erro ao controlar execução:', error)
-      toast({
-        title: 'Erro',
-        description: 'Erro de conexão',
-        variant: 'destructive'
-      })
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return <CalendarDays className="h-4 w-4" />
+      case 'SENT':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'FAILED':
+        return <AlertCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <CalendarDays className="h-4 w-4" />
     }
   }
 
   const getStatusColor = (status: string) => {
-    const colors = {
-      'RUNNING': 'bg-blue-100 text-blue-800',
-      'COMPLETED': 'bg-green-100 text-green-800',
-      'PAUSED': 'bg-orange-100 text-orange-800',
-      'FAILED': 'bg-red-100 text-red-800'
-    }
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'
-  }
-
-  const getStatusLabel = (status: string) => {
-    const labels = {
-      'RUNNING': 'Em Execução',
-      'COMPLETED': 'Concluído',
-      'PAUSED': 'Pausado',
-      'FAILED': 'Falha'
-    }
-    return labels[status as keyof typeof labels] || status
-  }
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: ptBR })
-  }
-
-  const nextPage = () => {
-    if (pagination.hasMore) {
-      setPagination(prev => ({
-        ...prev,
-        offset: prev.offset + prev.limit
-      }))
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'SENT':
+        return 'bg-green-100 text-green-800'
+      case 'FAILED':
+        return 'bg-red-100 text-red-800'
+      case 'SKIPPED':
+        return 'bg-gray-100 text-gray-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
   }
 
-  const prevPage = () => {
-    if (pagination.offset > 0) {
-      setPagination(prev => ({
-        ...prev,
-        offset: Math.max(0, prev.offset - prev.limit)
-      }))
+  const toggleRowExpansion = (executionId: string) => {
+    const newExpanded = new Set(expandedRows)
+    if (newExpanded.has(executionId)) {
+      newExpanded.delete(executionId)
+    } else {
+      newExpanded.add(executionId)
     }
+    setExpandedRows(newExpanded)
+  }
+
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return '-'
+
+    const parsedDate = new Date(date)
+    if (isNaN(parsedDate.getTime())) {
+      console.warn('Data inválida:', date)
+      return 'Data inválida'
+    }
+
+    return parsedDate.toLocaleString('pt-BR')
   }
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Carregando execuções...</div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">Execuções de Workflows</h1>
+            <p className="text-muted-foreground">
+              Acompanhe o status das execuções de workflows
+            </p>
+          </div>
+        </div>
+
+        <div className="animate-pulse space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
+            ))}
+          </div>
+          <div className="h-64 bg-gray-200 rounded-lg"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/admin/email-marketing/workflows">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Execuções de Workflows</h1>
-              <p className="text-gray-600 mt-2">
-                Acompanhe o status das automações em andamento
-              </p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Execuções de Workflows</h1>
+          <p className="text-muted-foreground">
+            Acompanhe o status das execuções de workflows de email
+          </p>
         </div>
+        <Button onClick={fetchExecutions} variant="outline">
+          Atualizar
+        </Button>
+      </div>
 
-        {/* Filtros */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Filtros</CardTitle>
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 items-center">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                <span className="text-sm font-medium">Status:</span>
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="RUNNING">Em Execução</SelectItem>
-                  <SelectItem value="COMPLETED">Concluído</SelectItem>
-                  <SelectItem value="PAUSED">Pausado</SelectItem>
-                  <SelectItem value="FAILED">Falha</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
 
-        {/* Lista de Execuções */}
-        {executions.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Clock className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+            <CalendarDays className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pending}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Enviados</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.sent}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Falharam</CardTitle>
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.failed}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabela de Execuções */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico de Execuções</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {executions.length === 0 ? (
+            <div className="text-center py-8">
+              <Mail className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-medium text-muted-foreground">
                 Nenhuma execução encontrada
               </h3>
-              <p className="text-gray-600 text-center">
-                {statusFilter === 'all'
-                  ? 'Ainda não há execuções de workflows'
-                  : `Nenhuma execução com status "${getStatusLabel(statusFilter)}" encontrada`
-                }
+              <p className="mt-1 text-sm text-muted-foreground">
+                As execuções de workflows aparecerão aqui quando forem agendadas.
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {executions.map((execution) => (
-              <Card key={execution.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">
-                          {execution.workflow.name}
-                        </h3>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Lead</TableHead>
+                  <TableHead>Workflow</TableHead>
+                  <TableHead>Template</TableHead>
+                  <TableHead>Step</TableHead>
+                  <TableHead>Agendado</TableHead>
+                  <TableHead>Executado</TableHead>
+                  <TableHead>Erro</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {executions.map((execution) => (
+                  <>
+                    <TableRow
+                      key={execution.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => toggleRowExpansion(execution.id)}
+                    >
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleRowExpansion(execution.id)
+                          }}
+                        >
+                          {expandedRows.has(execution.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                      <TableCell>
                         <Badge className={getStatusColor(execution.status)}>
-                          {getStatusLabel(execution.status)}
+                          <div className="flex items-center gap-1">
+                            {getStatusIcon(execution.status)}
+                            {execution.status}
+                          </div>
                         </Badge>
-                        <Badge variant="outline">
-                          Step {execution.currentStep}
-                        </Badge>
-                      </div>
-
-                      <div className="grid md:grid-cols-2 gap-4 mt-4">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <User className="w-4 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
                           <div>
                             <div className="font-medium">{execution.lead.name}</div>
-                            <div className="text-sm">{execution.lead.email}</div>
-                            {execution.lead.company && (
-                              <div className="text-sm">{execution.lead.company}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {execution.lead.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {execution.workflow.name}
+                      </TableCell>
+                      <TableCell>
+                        {execution.step?.template ? (
+                          <div>
+                            <div className="font-medium">{execution.step.template.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {execution.step.template.subject}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{execution.stepOrder}</TableCell>
+                      <TableCell className="text-sm">
+                        {formatDate(execution.scheduledAt)}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {execution.executedAt ? formatDate(execution.executedAt) : '-'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {execution.error ? (
+                          <div className="text-red-600 max-w-xs truncate" title={execution.error}>
+                            {execution.error}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Linha expansível com detalhes */}
+                    {expandedRows.has(execution.id) && (
+                      <TableRow>
+                        <TableCell colSpan={9} className="bg-muted/20 p-0">
+                          <div className="p-4 space-y-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              {/* Informações adicionais */}
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <User className="h-4 w-4" />
+                                  Detalhes do Lead
+                                </h4>
+                                <div className="space-y-2 text-sm">
+                                  <div><strong>Nome:</strong> {execution.lead.name}</div>
+                                  <div><strong>Email:</strong> {execution.lead.email}</div>
+                                  {execution.lead.company && (
+                                    <div><strong>Empresa:</strong> {execution.lead.company}</div>
+                                  )}
+                                  <div><strong>ID:</strong> {execution.leadId}</div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <Mail className="h-4 w-4" />
+                                  Informações da Execução
+                                </h4>
+                                <div className="space-y-2 text-sm">
+                                  <div><strong>ID da Execução:</strong> {execution.id}</div>
+                                  <div><strong>Workflow ID:</strong> {execution.workflowId}</div>
+                                  <div><strong>Step Atual:</strong> {execution.stepOrder}</div>
+                                  <div><strong>Status:</strong> <Badge className={getStatusColor(execution.status)}>{execution.status}</Badge></div>
+                                  {execution.nextAction && (
+                                    <div className="pt-2 border-t">
+                                      <strong>Próxima Ação:</strong>
+                                      <div className="text-blue-600 font-medium">{execution.nextAction.description}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Agendado para: {formatDate(execution.nextAction.scheduledFor)}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Seção de Logs */}
+                            {execution.logs && (
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <FileText className="h-4 w-4" />
+                                  Logs de Execução
+                                </h4>
+                                <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs overflow-x-auto max-h-60">
+                                  {(() => {
+                                    try {
+                                      const logs = JSON.parse(execution.logs)
+                                      return (
+                                        <div className="space-y-2">
+                                          {logs.map((log: any, index: number) => (
+                                            <div key={index} className="border-l-2 border-blue-500 pl-3">
+                                              <div className="flex items-center gap-2 text-blue-300">
+                                                <span className="text-white">[{new Date(log.timestamp).toLocaleString('pt-BR')}]</span>
+                                                <span className="font-semibold">{log.action}</span>
+                                                <span className={`px-2 py-1 rounded text-xs ${
+                                                  log.status === 'SUCCESS' ? 'bg-green-800 text-green-200' :
+                                                  log.status === 'FAILED' ? 'bg-red-800 text-red-200' :
+                                                  'bg-yellow-800 text-yellow-200'
+                                                }`}>
+                                                  {log.status}
+                                                </span>
+                                              </div>
+                                              {log.template && <div className="text-gray-300">Template: {log.template}</div>}
+                                              {log.recipient && <div className="text-gray-300">Para: {log.recipient}</div>}
+                                              {log.error && <div className="text-red-300">Erro: {log.error}</div>}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )
+                                    } catch {
+                                      return <pre>{execution.logs}</pre>
+                                    }
+                                  })()}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Seção de Erro Detalhado */}
+                            {execution.error && (
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2 text-red-600">
+                                  <AlertCircle className="h-4 w-4" />
+                                  Erro Detalhado
+                                </h4>
+                                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                                  <pre className="text-sm text-red-800 whitespace-pre-wrap">{execution.error}</pre>
+                                </div>
+                              </div>
                             )}
                           </div>
-                        </div>
-
-                        <div className="space-y-2 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            <span>Iniciado: {formatDate(execution.startedAt)}</span>
-                          </div>
-
-                          {execution.completedAt && (
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span>Concluído: {formatDate(execution.completedAt)}</span>
-                            </div>
-                          )}
-
-                          {execution.nextStepAt && execution.status === 'RUNNING' && (
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span>Próximo step: {formatDate(execution.nextStepAt)}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      {execution.status === 'RUNNING' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => controlExecution(execution.id, 'pause')}
-                        >
-                          <Pause className="w-4 h-4" />
-                        </Button>
-                      )}
-
-                      {execution.status === 'PAUSED' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => controlExecution(execution.id, 'resume')}
-                        >
-                          <Play className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Paginação */}
-            <div className="flex justify-between items-center mt-6">
-              <div className="text-sm text-gray-600">
-                Mostrando {pagination.offset + 1} - {Math.min(pagination.offset + pagination.limit, pagination.total)} de {pagination.total} execuções
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={prevPage}
-                  disabled={pagination.offset === 0}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={nextPage}
-                  disabled={!pagination.hasMore}
-                >
-                  Próximo
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

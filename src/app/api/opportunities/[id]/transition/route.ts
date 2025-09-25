@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
+import { opportunityWebhooks } from '@/services/webhook-service'
 
 interface RouteParams {
   params: Promise<{
@@ -180,6 +181,47 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           })
         }
       })
+    }
+
+    // Trigger webhooks for stage transition
+    try {
+      await opportunityWebhooks.stageChanged({
+        opportunity: updatedOpportunity,
+        previousStage: currentOpportunity.stage,
+        newStage: stageTo,
+        changedBy: {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email
+        }
+      })
+
+      // Trigger specific win/loss webhooks
+      if (stageTo === 'WON' && currentOpportunity.stage !== 'WON') {
+        await opportunityWebhooks.won({
+          opportunity: updatedOpportunity,
+          previousStage: currentOpportunity.stage,
+          wonBy: {
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email
+          }
+        })
+      } else if (stageTo === 'LOST' && currentOpportunity.stage !== 'LOST') {
+        await opportunityWebhooks.lost({
+          opportunity: updatedOpportunity,
+          previousStage: currentOpportunity.stage,
+          lostReason,
+          lostBy: {
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email
+          }
+        })
+      }
+    } catch (webhookError) {
+      console.error('Webhook error for opportunity transition:', webhookError)
+      // Don't fail the API call if webhook fails
     }
 
     return NextResponse.json({

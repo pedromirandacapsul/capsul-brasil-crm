@@ -4,128 +4,100 @@ const prisma = new PrismaClient()
 
 async function seedEmailData() {
   try {
-    console.log('🌱 Populando banco com dados de teste para email marketing...')
+    console.log('🌱 Populando banco com dados de email marketing...')
 
-    // Buscar um usuário admin existente
+    // Buscar usuário admin
     const adminUser = await prisma.user.findFirst({
-      where: {
-        role: 'ADMIN'
-      }
+      where: { role: 'ADMIN' }
     })
 
     if (!adminUser) {
-      console.error('❌ Nenhum usuário admin encontrado. Crie um usuário admin primeiro.')
+      console.error('❌ Usuário admin não encontrado')
       return
     }
 
-    console.log(`✅ Usando usuário admin: ${adminUser.email}`)
+    console.log('✅ Usando usuário admin:', adminUser.email)
 
-    // 1. Criar templates de email
-    console.log('📧 Criando templates de email...')
-
-    const templates = [
-      {
-        name: 'Boas-vindas Lead',
-        description: 'Email de boas-vindas para novos leads',
-        subject: 'Bem-vindo(a) à Capsul Brasil! 🎉',
-        htmlContent: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #2563eb; text-align: center;">Bem-vindo(a), {{nome}}! 🎉</h1>
-            <p>É um prazer ter você conosco na <strong>Capsul Brasil</strong>!</p>
-            <p>Recebemos seu interesse e nossa equipe entrará em contato em breve!</p>
-          </div>`,
-        textContent: `Bem-vindo(a), {{nome}}!\n\nÉ um prazer ter você conosco na Capsul Brasil!`,
-        variables: JSON.stringify(['nome', 'empresa', 'email', 'telefone']),
-        category: 'WELCOME',
-        createdById: adminUser.id
-      },
-      {
-        name: 'Follow-up Qualificação',
-        description: 'Email para qualificar leads interessados',
-        subject: 'Vamos conversar sobre {{empresa}}? ☕',
-        htmlContent: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #2563eb;">Olá {{nome}}, como vai? 👋</h2>
-            <p>Gostaria de entender melhor como podemos ajudar a <strong>{{empresa}}</strong>.</p>
-            <p>Que tal marcarmos um bate-papo de 15 minutos?</p>
-          </div>`,
-        textContent: `Olá {{nome}}, como vai?\n\nGostaria de conversar sobre como podemos ajudar a {{empresa}}.`,
-        variables: JSON.stringify(['nome', 'empresa', 'email']),
-        category: 'FOLLOW_UP',
-        createdById: adminUser.id
-      }
-    ]
-
-    for (const template of templates) {
-      try {
-        const created = await prisma.emailTemplate.create({
-          data: template
-        })
-        console.log(`   ✅ Template "${created.name}" criado`)
-      } catch (error) {
-        console.log(`   ⚠️  Template "${template.name}" já existe ou erro:`, error.message)
-      }
-    }
-
-    // 2. Criar alguns leads de teste
-    console.log('👥 Verificando leads de teste...')
-
-    const testLeads = [
-      {
-        name: 'João Silva',
-        email: 'joao@empresa1.com.br',
-        phone: '(11) 99999-1111',
-        company: 'Tech Innovate Ltda',
-        status: 'NEW',
-        source: 'WEBSITE',
-        interest: 'Automação de processos',
-        dealValue: 25000
-      },
-      {
-        name: 'Maria Santos',
-        email: 'maria@startup2.com.br',
-        phone: '(11) 99999-2222',
-        company: 'StartupX',
-        status: 'QUALIFIED',
-        source: 'LINKEDIN',
-        interest: 'CRM personalizado',
-        dealValue: 15000
-      }
-    ]
-
-    for (const lead of testLeads) {
-      try {
-        const existing = await prisma.lead.findUnique({
-          where: { email: lead.email }
-        })
-
-        if (!existing) {
-          const created = await prisma.lead.create({
-            data: lead
-          })
-          console.log(`   ✅ Lead "${created.name}" criado`)
-        } else {
-          console.log(`   ℹ️  Lead "${lead.name}" já existe`)
+    // Criar templates básicos
+    const templates = await prisma.emailTemplate.createMany({
+      data: [
+        {
+          name: 'Boas-vindas',
+          subject: 'Bem-vindo(a) ao nosso sistema!',
+          htmlContent: `
+<h1>Olá {{name}}!</h1>
+<p>Seja muito bem-vindo(a) ao nosso sistema!</p>
+<p>Estamos muito felizes em tê-lo(a) conosco.</p>
+<p>Em breve entraremos em contato com mais informações.</p>
+<p>Atenciosamente,<br>Equipe Capsul Brasil</p>
+          `,
+          textContent: 'Olá {{name}}! Seja muito bem-vindo(a) ao nosso sistema!',
+          category: 'WORKFLOW',
+          active: true,
+          createdById: adminUser.id
+        },
+        {
+          name: 'Seguimento 1',
+          subject: 'Que tal conhecer mais sobre nossos serviços?',
+          htmlContent: `
+<h1>Olá {{name}}!</h1>
+<p>Esperamos que esteja tudo bem!</p>
+<p>Gostaríamos de apresentar nossos serviços em mais detalhes.</p>
+<p>Quando seria um bom momento para conversarmos?</p>
+<p>Atenciosamente,<br>Equipe Capsul Brasil</p>
+          `,
+          textContent: 'Olá {{name}}! Esperamos que esteja tudo bem!',
+          category: 'WORKFLOW',
+          active: true,
+          createdById: adminUser.id
         }
-      } catch (error) {
-        console.log(`   ⚠️  Erro ao criar lead "${lead.name}":`, error.message)
-      }
-    }
+      ]
+    })
+    console.log(`✅ ${templates.count} templates criados`)
 
-    console.log('🎉 Seed de dados de email marketing concluído!')
+    // Buscar templates para criar workflows
+    const templatesList = await prisma.emailTemplate.findMany({
+      where: { active: true }
+    })
+
+    // Criar workflows de exemplo
+    console.log('🔄 Criando workflows de exemplo...')
+
+    const workflow1 = await prisma.emailWorkflow.create({
+      data: {
+        name: 'Boas-vindas para Novos Leads',
+        description: 'Sequência de emails para leads recém cadastrados',
+        triggerType: 'LEAD_CREATED',
+        triggerConfig: JSON.stringify({}),
+        active: true,
+        createdById: adminUser.id,
+        steps: {
+          create: [
+            {
+              stepOrder: 1,
+              templateId: templatesList[0].id,
+              delayHours: 0,
+              conditions: JSON.stringify({})
+            },
+            {
+              stepOrder: 2,
+              templateId: templatesList[1].id,
+              delayHours: 24,
+              conditions: JSON.stringify({})
+            }
+          ]
+        }
+      }
+    })
+
+    console.log(`   ✅ Workflow "${workflow1.name}" criado com 2 steps`)
+    console.log('🎉 Seed de email marketing concluído!')
 
   } catch (error) {
     console.error('❌ Erro no seed:', error)
-    throw error
   } finally {
     await prisma.$disconnect()
   }
 }
 
 seedEmailData()
-  .then(() => {
-    console.log('✅ Seed executado com sucesso!')
-    process.exit(0)
-  })
-  .catch((error) => {
-    console.error('❌ Erro no seed:', error)
-    process.exit(1)
-  })

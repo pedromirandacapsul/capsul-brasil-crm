@@ -63,11 +63,11 @@ export default function CreateWorkflowPage() {
   const loadTemplates = async () => {
     try {
       setTemplatesLoading(true)
-      const response = await fetch('/api/email-marketing/templates')
+      const response = await fetch('/api/email/templates')
       const data = await response.json()
 
       if (data.success) {
-        setTemplates(data.templates)
+        setTemplates(data.data)
       } else {
         toast({
           title: 'Erro',

@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
-import { emailMarketingService } from '@/services/email-marketing-service'
+import { salesAutomationService } from '@/services/sales-automation-service'
 
+// GET /api/sales/templates - Listar templates de vendas
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-
-    // Controle de bypass via variável de ambiente (para desenvolvimento)
     const skipAuth = process.env.SKIP_AUTH_IN_DEVELOPMENT === 'true'
 
     if (!session && !skipAuth) {
@@ -27,9 +26,25 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const category = searchParams.get('category') || undefined
+    const type = searchParams.get('type')
+    const stage = searchParams.get('stage')
 
-    const templates = await emailMarketingService.getTemplates(category)
+    const prisma = (salesAutomationService as any).prisma || require('@prisma/client').PrismaClient
+    const db = new prisma()
+
+    const where: any = { active: true }
+    if (type) where.type = type
+    if (stage) where.stage = stage
+
+    const templates = await db.salesTemplate.findMany({
+      where,
+      include: {
+        createdBy: {
+          select: { id: true, name: true, email: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
 
     return NextResponse.json({
       success: true,
@@ -37,7 +52,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching email templates:', error)
+    console.error('Erro ao buscar templates de vendas:', error)
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
       { status: 500 }
@@ -45,11 +60,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/sales/templates - Criar template de vendas
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-
-    // Controle de bypass via variável de ambiente (para desenvolvimento)
     const skipAuth = process.env.SKIP_AUTH_IN_DEVELOPMENT === 'true'
 
     if (!session && !skipAuth) {
@@ -68,34 +82,32 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description, subject, htmlContent, textContent, variables, category } = body
+    const {
+      name,
+      type,
+      stage,
+      subject,
+      content,
+      generatePdf,
+      isDefault
+    } = body
 
-    if (!name || !subject || !htmlContent) {
+    if (!name || !type || !subject || !content) {
       return NextResponse.json(
-        { success: false, error: 'Nome, assunto e conteúdo HTML são obrigatórios' },
+        { success: false, error: 'Nome, tipo, assunto e conteúdo são obrigatórios' },
         { status: 400 }
       )
     }
 
-    // Se não tem sessão, buscar usuário admin
-    let userId = session?.user?.id
-    if (!userId) {
-      const { prisma } = await import('@/lib/prisma')
-      const adminUser = await prisma.user.findFirst({
-        where: { role: 'ADMIN' }
-      })
-      userId = adminUser?.id || 'admin-default'
-    }
-
-    const template = await emailMarketingService.createTemplate({
+    const template = await salesAutomationService.createSalesTemplate({
       name,
-      description,
+      type,
+      stage,
       subject,
-      htmlContent,
-      textContent,
-      variables,
-      category,
-      createdById: userId
+      content,
+      generatePdf,
+      isDefault,
+      userId: session?.user?.id || 'cmfx575q400009t5sv8fjg1rh'
     })
 
     return NextResponse.json({
@@ -104,7 +116,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating email template:', error)
+    console.error('Erro ao criar template de vendas:', error)
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
       { status: 500 }
