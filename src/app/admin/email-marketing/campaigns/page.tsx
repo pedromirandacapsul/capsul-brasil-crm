@@ -126,7 +126,7 @@ export default function EmailCampaignsPage() {
     if (!confirm('Tem certeza que deseja enviar esta campanha?')) return
 
     try {
-      const response = await fetch(`/api/email/campaigns/${campaignId}/send`, {
+      const response = await fetch(`/api/email-marketing/campaigns/${campaignId}/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

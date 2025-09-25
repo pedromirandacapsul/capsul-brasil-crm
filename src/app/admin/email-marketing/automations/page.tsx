@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,94 +45,85 @@ interface Automation {
 }
 
 export default function AutomationsPage() {
-  const [automations, setAutomations] = useState<Automation[]>([
-    {
-      id: '1',
-      name: 'Re-engajamento Leads Inativos',
-      trigger: 'Não abriu email há 30 dias',
-      description: 'Série de 3 emails para reativar leads que não abrem emails',
-      isActive: true,
-      leads: 284,
-      triggered: 89,
-      opened: 31,
-      clicked: 8,
-      openRate: 34.8,
-      clickRate: 9.0,
-      createdAt: '2025-09-20T10:00:00Z'
-    },
-    {
-      id: '2',
-      name: 'Abandono de Carrinho',
-      trigger: 'Visitou página de preços sem converter',
-      description: 'Email de follow-up 2h após visitar página de preços',
-      isActive: true,
-      leads: 156,
-      triggered: 42,
-      opened: 28,
-      clicked: 12,
-      openRate: 66.7,
-      clickRate: 28.6,
-      createdAt: '2025-09-18T14:30:00Z'
-    },
-    {
-      id: '3',
-      name: 'Aniversário de Lead',
-      trigger: 'Data de aniversário',
-      description: 'Email personalizado no aniversário do lead',
-      isActive: false,
-      leads: 512,
-      triggered: 23,
-      opened: 19,
-      clicked: 7,
-      openRate: 82.6,
-      clickRate: 30.4,
-      createdAt: '2025-09-15T09:00:00Z'
-    },
-    {
-      id: '4',
-      name: 'Lead Score Alto',
-      trigger: 'Score ≥ 80 pontos',
-      description: 'Notificação imediata para vendas quando lead fica quente',
-      isActive: true,
-      leads: 78,
-      triggered: 15,
-      opened: 13,
-      clicked: 9,
-      openRate: 86.7,
-      clickRate: 60.0,
-      createdAt: '2025-09-22T11:15:00Z'
-    },
-    {
-      id: '5',
-      name: 'Conteúdo Educativo',
-      trigger: 'Download de material',
-      description: 'Sequência de 5 emails educativos após download',
-      isActive: true,
-      leads: 234,
-      triggered: 67,
-      opened: 45,
-      clicked: 18,
-      openRate: 67.2,
-      clickRate: 26.9,
-      createdAt: '2025-09-16T16:45:00Z'
-    }
-  ])
+  const [automations, setAutomations] = useState<Automation[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const toggleAutomation = (id: string) => {
-    setAutomations(automations.map(automation =>
-      automation.id === id
-        ? { ...automation, isActive: !automation.isActive }
-        : automation
-    ))
+  useEffect(() => {
+    fetchAutomations()
+  }, [])
+
+  const fetchAutomations = async () => {
+    try {
+      const response = await fetch('/api/email-marketing/automations')
+      const data = await response.json()
+
+      if (data.success) {
+        // Mapear dados da API para o formato esperado pelo componente
+        const mappedAutomations = data.data.map((automation: any) => ({
+          id: automation.id,
+          name: automation.name,
+          trigger: automation.trigger || 'Manual',
+          description: automation.description || '',
+          isActive: automation.isActive,
+          leads: automation.leads || 0,
+          triggered: automation.triggered || 0,
+          opened: automation.opened || 0,
+          clicked: automation.clicked || 0,
+          openRate: automation.openRate || 0,
+          clickRate: automation.clickRate || 0,
+          createdAt: automation.createdAt
+        }))
+        setAutomations(mappedAutomations)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar automações:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleAutomation = async (id: string) => {
+    const automation = automations.find(a => a.id === id)
+    if (!automation) return
+
+    try {
+      const response = await fetch(`/api/email-marketing/automations/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: automation.name,
+          description: automation.description,
+          active: !automation.isActive
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setAutomations(automations.map(automation =>
+          automation.id === id
+            ? { ...automation, isActive: !automation.isActive }
+            : automation
+        ))
+      } else {
+        console.error('Erro ao alterar status:', data.error)
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status da automação:', error)
+    }
   }
 
   const getTriggerIcon = (trigger: string) => {
-    if (trigger.includes('30 dias')) return <Clock className="h-4 w-4 text-orange-500" />
-    if (trigger.includes('preços')) return <Eye className="h-4 w-4 text-blue-500" />
-    if (trigger.includes('aniversário')) return <Heart className="h-4 w-4 text-pink-500" />
-    if (trigger.includes('Score')) return <TrendingUp className="h-4 w-4 text-green-500" />
-    if (trigger.includes('Download')) return <MousePointer className="h-4 w-4 text-purple-500" />
-    return <Zap className="h-4 w-4 text-gray-500" />
+    const lowerTrigger = trigger.toLowerCase()
+    if (lowerTrigger.includes('lead_created') || lowerTrigger.includes('novo lead')) return <Users className="h-4 w-4 text-blue-500" />
+    if (lowerTrigger.includes('status_changed') || lowerTrigger.includes('status')) return <TrendingUp className="h-4 w-4 text-green-500" />
+    if (lowerTrigger.includes('tag_added') || lowerTrigger.includes('tag')) return <Zap className="h-4 w-4 text-purple-500" />
+    if (lowerTrigger.includes('date_based') || lowerTrigger.includes('data')) return <Calendar className="h-4 w-4 text-orange-500" />
+    if (lowerTrigger.includes('manual')) return <MousePointer className="h-4 w-4 text-gray-500" />
+    if (lowerTrigger.includes('aniversário')) return <Heart className="h-4 w-4 text-pink-500" />
+    return <Eye className="h-4 w-4 text-gray-500" />
   }
 
   const getPerformanceColor = (rate: number, type: 'open' | 'click') => {
@@ -146,6 +137,24 @@ export default function AutomationsPage() {
     return new Date(date).toLocaleDateString('pt-BR')
   }
 
+  // Handlers para os botões
+  const handleNewAutomation = () => {
+    window.location.href = '/admin/email-marketing/automations/create'
+  }
+
+  const handleEditAutomation = (automationId: string) => {
+    window.location.href = `/admin/email-marketing/automations/${automationId}`
+  }
+
+  const handleViewLogs = (automationId: string) => {
+    window.location.href = `/admin/email-marketing/automations/${automationId}?tab=logs`
+  }
+
+  const handleCreateSuggestion = (suggestionType: string) => {
+    // Para sugestões, pode manter como desenvolvimento futuro ou implementar
+    alert(`Funcionalidade em desenvolvimento: ${suggestionType}`)
+  }
+
   const activeAutomations = automations.filter(a => a.isActive)
   const totalTriggered = automations.reduce((sum, a) => sum + a.triggered, 0)
   const avgOpenRate = automations.length > 0
@@ -154,6 +163,33 @@ export default function AutomationsPage() {
   const avgClickRate = automations.length > 0
     ? automations.reduce((sum, a) => sum + a.clickRate, 0) / automations.length
     : 0
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">Automações Comportamentais</h1>
+            <p className="text-muted-foreground">
+              Carregando automações...
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => (
+            <Card key={i}>
+              <CardHeader className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -165,7 +201,7 @@ export default function AutomationsPage() {
             Emails automáticos baseados no comportamento dos leads
           </p>
         </div>
-        <Button>
+        <Button onClick={handleNewAutomation}>
           <Zap className="h-4 w-4 mr-2" />
           Nova Automação
         </Button>
@@ -295,10 +331,18 @@ export default function AutomationsPage() {
                   Criada em {formatDate(automation.createdAt)}
                 </span>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditAutomation(automation.id)}
+                  >
                     Editar
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewLogs(automation.id)}
+                  >
                     Ver Logs
                   </Button>
                 </div>
@@ -323,7 +367,11 @@ export default function AutomationsPage() {
               <p className="text-sm text-muted-foreground mb-3">
                 Email automático 3 dias após envio de proposta sem resposta
               </p>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCreateSuggestion('Criar Follow-up Proposta')}
+              >
                 Criar Automação
               </Button>
             </div>
@@ -333,7 +381,11 @@ export default function AutomationsPage() {
               <p className="text-sm text-muted-foreground mb-3">
                 Move leads automaticamente entre segmentos baseado em comportamento
               </p>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCreateSuggestion('Configurar Segmentação Dinâmica')}
+              >
                 Configurar
               </Button>
             </div>
@@ -343,7 +395,11 @@ export default function AutomationsPage() {
               <p className="text-sm text-muted-foreground mb-3">
                 Integração com WhatsApp para leads que não abrem emails
               </p>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCreateSuggestion('Integrar Cross-channel WhatsApp')}
+              >
                 Integrar
               </Button>
             </div>
@@ -353,7 +409,11 @@ export default function AutomationsPage() {
               <p className="text-sm text-muted-foreground mb-3">
                 IA para determinar melhor horário de envio por lead
               </p>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCreateSuggestion('Ativar IA Horário Otimizado')}
+              >
                 Ativar IA
               </Button>
             </div>

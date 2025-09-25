@@ -163,7 +163,8 @@ export class EmailWorkflowService {
           workflowId,
           leadId,
           data: JSON.stringify(triggerData || {}),
-          currentStep: 1, // Começar no step 1
+          currentStep: 0,        // Começar no step 0
+          status: 'RUNNING',     // Status obrigatório
           nextStepAt: new Date() // Primeira etapa executa imediatamente
         }
       })

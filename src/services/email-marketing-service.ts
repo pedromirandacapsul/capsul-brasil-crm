@@ -91,7 +91,7 @@ export class EmailMarketingService {
 
       case 'ses':
         return nodemailer.createTransport({
-          host: process.env.SES_SMTP_HOST || `email-smtp.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com`,
+          host: process.env.SES_SMTP_HOST || `email-smtp.${process.env.AWS_SES_REGION || process.env.AWS_REGION || 'us-east-2'}.amazonaws.com`,
           port: 587,
           secure: false,
           auth: {
