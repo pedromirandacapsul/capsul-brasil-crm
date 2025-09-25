@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Mail, TrendingUp, Users, Send, TestTube, CheckCircle, XCircle, Zap } from 'lucide-react'
+import { Plus, Mail, TrendingUp, Users, Send, TestTube, CheckCircle, XCircle, Zap, Target, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
 
 interface EmailMetrics {
@@ -213,6 +213,57 @@ export default function EmailMarketingPage() {
             <div className="flex items-center text-red-600 text-sm font-medium">
               <Plus className="w-4 h-4 mr-1" />
               Gerenciar Templates
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/email-marketing/segments"
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Segmentação</h3>
+              <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center group-hover:bg-cyan-200 transition-colors">
+                <Target className="w-5 h-5 text-cyan-600" />
+              </div>
+            </div>
+            <p className="text-gray-600 mb-4">Segmente leads por comportamento e critérios personalizados</p>
+            <div className="flex items-center text-cyan-600 text-sm font-medium">
+              <Target className="w-4 h-4 mr-1" />
+              Gerenciar Segmentos
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/email-marketing/ab-tests"
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Testes A/B</h3>
+              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                <BarChart3 className="w-5 h-5 text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-gray-600 mb-4">Teste diferentes versões para otimizar performance</p>
+            <div className="flex items-center text-emerald-600 text-sm font-medium">
+              <BarChart3 className="w-4 h-4 mr-1" />
+              Criar Teste A/B
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/email-marketing/automations"
+            className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Automações</h3>
+              <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center group-hover:bg-violet-200 transition-colors">
+                <Zap className="w-5 h-5 text-violet-600" />
+              </div>
+            </div>
+            <p className="text-gray-600 mb-4">Configure automações inteligentes baseadas em comportamento</p>
+            <div className="flex items-center text-violet-600 text-sm font-medium">
+              <Zap className="w-4 h-4 mr-1" />
+              Gerenciar Automações
             </div>
           </Link>
         </div>
