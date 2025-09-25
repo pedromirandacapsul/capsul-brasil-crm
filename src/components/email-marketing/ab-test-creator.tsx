@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -183,16 +182,17 @@ export function ABTestCreator({ templates, segments, onSave }: ABTestCreatorProp
         {/* Configurações do teste */}
         <div className="space-y-4">
           <div>
-            <Label>Tamanho do Teste: {config.settings.testSize}%</Label>
-            <Slider
-              value={[config.settings.testSize]}
-              onValueChange={([value]) => setConfig({
-                ...config,
-                settings: { ...config.settings, testSize: value }
-              })}
+            <Label>Tamanho do Teste (%)</Label>
+            <Input
+              type="number"
               min={10}
               max={50}
               step={5}
+              value={config.settings.testSize}
+              onChange={(e) => setConfig({
+                ...config,
+                settings: { ...config.settings, testSize: parseInt(e.target.value) || 20 }
+              })}
             />
             <p className="text-sm text-gray-500 mt-1">
               {config.settings.testSize}% receberá o teste, {100 - config.settings.testSize}% receberá o vencedor
@@ -220,16 +220,17 @@ export function ABTestCreator({ templates, segments, onSave }: ABTestCreatorProp
           </div>
 
           <div>
-            <Label>Duração do Teste (horas): {config.settings.testDuration}</Label>
-            <Slider
-              value={[config.settings.testDuration]}
-              onValueChange={([value]) => setConfig({
-                ...config,
-                settings: { ...config.settings, testDuration: value }
-              })}
+            <Label>Duração do Teste (horas)</Label>
+            <Input
+              type="number"
               min={1}
               max={72}
               step={1}
+              value={config.settings.testDuration}
+              onChange={(e) => setConfig({
+                ...config,
+                settings: { ...config.settings, testDuration: parseInt(e.target.value) || 24 }
+              })}
             />
           </div>
         </div>

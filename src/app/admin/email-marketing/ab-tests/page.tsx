@@ -177,7 +177,7 @@ export default function ABTestsPage() {
       createdAt: '2025-09-23T09:00:00Z',
       startedAt: '2025-09-23T15:00:00Z'
     }
-  ])
+  ];
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
