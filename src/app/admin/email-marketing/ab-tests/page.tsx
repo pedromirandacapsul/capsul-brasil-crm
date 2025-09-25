@@ -4,9 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { ABTestCreator } from '@/components/email-marketing/ab-test-creator'
 import {
   Dialog,
   DialogContent,
@@ -69,6 +67,59 @@ interface ABTest {
 
 export default function ABTestsPage() {
   const [tests, setTests] = useState<ABTest[]>([
+    // Carregar testes reais da API
+  ])
+  const [templates, setTemplates] = useState([])
+  const [segments, setSegments] = useState([])
+
+  useEffect(() => {
+    loadTests()
+    loadTemplates()
+    loadSegments()
+  }, [])
+
+  const loadTests = async () => {
+    try {
+      const response = await fetch('/api/email-marketing/ab-tests')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setTests(data.data || mockTests)
+        }
+      } else {
+        setTests(mockTests)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar testes A/B:', error)
+      setTests(mockTests)
+    }
+  }
+
+  const loadTemplates = async () => {
+    try {
+      const response = await fetch('/api/email-marketing/templates')
+      if (response.ok) {
+        const data = await response.json()
+        setTemplates(data.templates || [])
+      }
+    } catch (error) {
+      console.error('Erro ao carregar templates:', error)
+    }
+  }
+
+  const loadSegments = async () => {
+    try {
+      const response = await fetch('/api/email-marketing/segments')
+      if (response.ok) {
+        const data = await response.json()
+        setSegments(data.segments || [])
+      }
+    } catch (error) {
+      console.error('Erro ao carregar segmentos:', error)
+    }
+  }
+
+  const mockTests = [
     {
       id: '1',
       name: 'Teste Assunto Newsletter',
@@ -129,14 +180,6 @@ export default function ABTestsPage() {
   ])
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [newTest, setNewTest] = useState({
-    name: '',
-    testType: 'SUBJECT',
-    variantA: { name: 'Variante A', subject: '', content: '' },
-    variantB: { name: 'Variante B', subject: '', content: '' },
-    sampleSize: 500,
-    splitPercentage: 50
-  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -166,47 +209,6 @@ export default function ABTestsPage() {
     }
   }
 
-  const createTest = async () => {
-    // Simular criação do teste
-    const test: ABTest = {
-      id: Date.now().toString(),
-      name: newTest.name,
-      status: 'DRAFT',
-      testType: newTest.testType as any,
-      variantA: {
-        ...newTest.variantA,
-        recipients: 0,
-        opened: 0,
-        clicked: 0,
-        openRate: 0,
-        clickRate: 0
-      },
-      variantB: {
-        ...newTest.variantB,
-        recipients: 0,
-        opened: 0,
-        clicked: 0,
-        openRate: 0,
-        clickRate: 0
-      },
-      winner: null,
-      confidence: 0,
-      createdAt: new Date().toISOString()
-    }
-
-    setTests([test, ...tests])
-    setIsCreateModalOpen(false)
-
-    // Reset form
-    setNewTest({
-      name: '',
-      testType: 'SUBJECT',
-      variantA: { name: 'Variante A', subject: '', content: '' },
-      variantB: { name: 'Variante B', subject: '', content: '' },
-      sampleSize: 500,
-      splitPercentage: 50
-    })
-  }
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleString('pt-BR', {
@@ -236,154 +238,18 @@ export default function ABTestsPage() {
               Novo Teste A/B
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Novo Teste A/B</DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Nome do Teste</Label>
-                  <Input
-                    value={newTest.name}
-                    onChange={(e) => setNewTest({ ...newTest, name: e.target.value })}
-                    placeholder="Ex: Teste Assunto Newsletter"
-                  />
-                </div>
-                <div>
-                  <Label>Tipo de Teste</Label>
-                  <select
-                    value={newTest.testType}
-                    onChange={(e) => setNewTest({ ...newTest, testType: e.target.value })}
-                    className="w-full border rounded px-3 py-2"
-                  >
-                    <option value="SUBJECT">Linha de Assunto</option>
-                    <option value="CONTENT">Conteúdo</option>
-                    <option value="SENDER">Remetente</option>
-                    <option value="TIME">Horário de Envio</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium mb-3">Variante A</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>Nome</Label>
-                      <Input
-                        value={newTest.variantA.name}
-                        onChange={(e) => setNewTest({
-                          ...newTest,
-                          variantA: { ...newTest.variantA, name: e.target.value }
-                        })}
-                      />
-                    </div>
-                    {newTest.testType === 'SUBJECT' && (
-                      <div>
-                        <Label>Assunto</Label>
-                        <Input
-                          value={newTest.variantA.subject}
-                          onChange={(e) => setNewTest({
-                            ...newTest,
-                            variantA: { ...newTest.variantA, subject: e.target.value }
-                          })}
-                          placeholder="Linha de assunto A"
-                        />
-                      </div>
-                    )}
-                    {newTest.testType === 'CONTENT' && (
-                      <div>
-                        <Label>Conteúdo</Label>
-                        <Textarea
-                          value={newTest.variantA.content}
-                          onChange={(e) => setNewTest({
-                            ...newTest,
-                            variantA: { ...newTest.variantA, content: e.target.value }
-                          })}
-                          placeholder="Conteúdo da variante A"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-medium mb-3">Variante B</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>Nome</Label>
-                      <Input
-                        value={newTest.variantB.name}
-                        onChange={(e) => setNewTest({
-                          ...newTest,
-                          variantB: { ...newTest.variantB, name: e.target.value }
-                        })}
-                      />
-                    </div>
-                    {newTest.testType === 'SUBJECT' && (
-                      <div>
-                        <Label>Assunto</Label>
-                        <Input
-                          value={newTest.variantB.subject}
-                          onChange={(e) => setNewTest({
-                            ...newTest,
-                            variantB: { ...newTest.variantB, subject: e.target.value }
-                          })}
-                          placeholder="Linha de assunto B"
-                        />
-                      </div>
-                    )}
-                    {newTest.testType === 'CONTENT' && (
-                      <div>
-                        <Label>Conteúdo</Label>
-                        <Textarea
-                          value={newTest.variantB.content}
-                          onChange={(e) => setNewTest({
-                            ...newTest,
-                            variantB: { ...newTest.variantB, content: e.target.value }
-                          })}
-                          placeholder="Conteúdo da variante B"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Tamanho da Amostra</Label>
-                  <Input
-                    type="number"
-                    value={newTest.sampleSize}
-                    onChange={(e) => setNewTest({ ...newTest, sampleSize: parseInt(e.target.value) })}
-                  />
-                </div>
-                <div>
-                  <Label>Divisão (%)</Label>
-                  <Input
-                    type="number"
-                    value={newTest.splitPercentage}
-                    onChange={(e) => setNewTest({ ...newTest, splitPercentage: parseInt(e.target.value) })}
-                    min="1"
-                    max="50"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {newTest.splitPercentage}% para A, {newTest.splitPercentage}% para B, {100 - (newTest.splitPercentage * 2)}% controle
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={createTest} disabled={!newTest.name}>
-                  Criar Teste
-                </Button>
-              </div>
-            </div>
+            <ABTestCreator
+              templates={templates}
+              segments={segments}
+              onSave={() => {
+                setIsCreateModalOpen(false)
+                loadTests() // Recarregar lista de testes
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>

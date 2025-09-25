@@ -60,6 +60,9 @@ model User {
   // Webhook Relations
   webhooks Webhook[] @relation("WebhookCreator")
 
+  // A/B Test Relations
+  abTests ABTest[]
+
   @@map("users")
 }
 
@@ -95,6 +98,13 @@ model Lead {
   nextActionNotes     String? // NEW: Observações sobre a próxima ação
   lossReason          String? // NEW: Motivo da perda/desqualificação
   lossDetails         String? // NEW: Detalhes do motivo da perda
+
+  // Email Marketing fields
+  emailSubscribed      Boolean   @default(true) // Se está inscrito para receber emails
+  unsubscribedAt       DateTime? // Quando cancelou inscrição
+  emailValidation      String?   // JSON com resultado da validação do email
+  lastEmailSentAt      DateTime? // Última vez que recebeu email
+  emailEngagementScore Int       @default(50) // Score de engajamento (0-100)
 
   // New fields for advanced features
   dealValue         Float?    @default(0)
@@ -1225,3 +1235,85 @@ model WebhookDelivery {
   @@index([event])
   @@map("webhook_deliveries")
 }
+
+// ===== EMAIL TRACKING SYSTEM =====
+
+model EmailTracking {
+  id            String    @id @default(cuid())
+  campaignId    String?   // Pode ser null para emails individuais
+  leadEmail     String
+  trackingToken String    @unique // Token único para rastreamento
+  status        String    @default("SENT") // SENT, OPENED, CLICKED, BOUNCED
+  sentAt        DateTime  @default(now())
+  openedAt      DateTime?
+  lastClickedAt DateTime?
+  openCount     Int       @default(0)
+  clickCount    Int       @default(0)
+  ipAddress     String?
+  userAgent     String?
+
+  clicks EmailClickTracking[]
+
+  @@index([trackingToken])
+  @@index([leadEmail])
+  @@index([campaignId])
+  @@map("email_tracking")
+}
+
+model EmailClickTracking {
+  id          String   @id @default(cuid())
+  trackingId  String
+  url         String
+  clickedAt   DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+
+  tracking EmailTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+
+  @@index([trackingId])
+  @@index([clickedAt])
+  @@map("email_click_tracking")
+}
+
+// ===== A/B TESTING SYSTEM =====
+
+model ABTest {
+  id         String    @id @default(cuid())
+  name       String
+  status     String    @default("DRAFT") // DRAFT, RUNNING, COMPLETED, PAUSED
+  templateId String?
+  segmentIds String? // JSON array de segment IDs
+  variantA   String // JSON com configuração da variante A
+  variantB   String // JSON com configuração da variante B
+  settings   String // JSON com configurações do teste
+  startedAt  DateTime?
+  endedAt    DateTime?
+  winnerId   String? // ID da variante vencedora
+  results    String? // JSON com resultados do teste
+  userId     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([startedAt])
+  @@map("ab_tests")
+}
+
+// ===== EMAIL EVENTS SYSTEM =====
+
+model EmailEvent {
+  id        String   @id @default(cuid())
+  leadEmail String
+  eventType String   // SENT, OPENED, CLICKED, BOUNCED, UNSUBSCRIBED, COMPLAINED
+  eventData String?  // JSON com dados adicionais do evento
+  createdAt DateTime @default(now())
+
+  @@index([leadEmail])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("email_events")
+}
+
+// ===== SCHEMA COMPLETO - TODAS AS FUNCIONALIDADES INTEGRADAS =====

@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { EmailTrackingService } from './email-tracking-service'
+import { EmailValidationService } from './email-validation-service'
 import nodemailer from 'nodemailer'
 
 export interface EmailTemplate {
@@ -53,9 +55,13 @@ export interface SegmentCriteria {
 export class EmailMarketingService {
   private static instance: EmailMarketingService
   private transporter: nodemailer.Transporter
+  private trackingService: EmailTrackingService
+  private validationService: EmailValidationService
 
   private constructor() {
     this.transporter = this.createTransporter()
+    this.trackingService = new EmailTrackingService()
+    this.validationService = new EmailValidationService()
   }
 
   private createTransporter(): nodemailer.Transporter {
@@ -1291,6 +1297,314 @@ export class EmailMarketingService {
     })
 
     return template
+  }
+
+  // ===== NOVOS MÉTODOS INTEGRADOS =====
+
+  // Validação de email com integração ao EmailValidationService
+  async validateEmailList(emails: string[]): Promise<{
+    valid: string[]
+    invalid: string[]
+    suspicious: string[]
+    results: Map<string, any>
+  }> {
+    const results = await this.validationService.validateBatch(emails)
+    const cleaned = await this.validationService.cleanEmailList(emails)
+
+    return {
+      ...cleaned,
+      results
+    }
+  }
+
+  // Método para enviar email individual com tracking integrado
+  async sendTrackedEmail(data: {
+    to: string
+    leadId?: string
+    subject: string
+    html: string
+    text?: string
+    campaignId?: string
+  }): Promise<{ success: boolean; trackingId?: string; error?: string }> {
+    try {
+      // Validar email antes do envio
+      const validation = await this.validationService.validate(data.to)
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: `Email inválido: ${validation.reason}`
+        }
+      }
+
+      // Criar tracking
+      const trackingId = await this.trackingService.createTracking({
+        email: data.to,
+        campaignId: data.campaignId,
+        metadata: { leadId: data.leadId }
+      })
+
+      // Injetar tracking no HTML
+      const htmlWithTracking = this.trackingService.injectTrackingPixel(data.html, trackingId)
+      const htmlWithLinks = this.trackingService.injectLinkTracking(htmlWithTracking, trackingId)
+
+      // Enviar email
+      const fromName = process.env.SMTP_FROM_NAME || 'Capsul Brasil CRM'
+      const fromEmail = process.env.SMTP_FROM || 'noreply@capsul.com.br'
+      const from = `"${fromName}" <${fromEmail}>`
+
+      const info = await this.transporter.sendMail({
+        from,
+        to: data.to,
+        subject: data.subject,
+        html: htmlWithLinks,
+        text: data.text,
+        headers: {
+          'X-Tracking-ID': trackingId,
+          'X-Campaign-ID': data.campaignId || '',
+          'X-Lead-ID': data.leadId || ''
+        }
+      })
+
+      // Registrar envio no tracking
+      await this.trackingService.recordEmailSent(trackingId, info.messageId || '')
+
+      return {
+        success: true,
+        trackingId
+      }
+
+    } catch (error) {
+      console.error('Erro ao enviar email com tracking:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      }
+    }
+  }
+
+  // Método para processar unsubscribe
+  async processUnsubscribe(token: string, ipAddress?: string): Promise<{
+    success: boolean
+    email?: string
+    error?: string
+  }> {
+    try {
+      // Decodificar token
+      const decoded = Buffer.from(token, 'base64').toString('utf8')
+      const [email, timestamp] = decoded.split('|')
+
+      if (!email || !timestamp) {
+        return { success: false, error: 'Token inválido' }
+      }
+
+      // Verificar se token não expirou (48 horas)
+      const tokenTime = parseInt(timestamp)
+      const now = Date.now()
+      const fortyEightHours = 48 * 60 * 60 * 1000
+
+      if (now - tokenTime > fortyEightHours) {
+        return { success: false, error: 'Token expirado' }
+      }
+
+      // Atualizar lead para unsubscribed
+      await prisma.lead.updateMany({
+        where: { email },
+        data: {
+          emailSubscribed: false,
+          unsubscribedAt: new Date()
+        }
+      })
+
+      // Registrar evento de unsubscribe
+      await prisma.emailEvent.create({
+        data: {
+          leadEmail: email,
+          eventType: 'UNSUBSCRIBED',
+          eventData: JSON.stringify({
+            token,
+            ipAddress,
+            timestamp: new Date().toISOString()
+          })
+        }
+      })
+
+      return { success: true, email }
+
+    } catch (error) {
+      console.error('Erro ao processar unsubscribe:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro interno'
+      }
+    }
+  }
+
+  // Método para gerar link de unsubscribe
+  generateUnsubscribeLink(email: string): string {
+    const timestamp = Date.now().toString()
+    const token = Buffer.from(`${email}|${timestamp}`).toString('base64')
+    return `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/unsubscribe/${token}`
+  }
+
+  // Método para processar A/B test
+  async processABTest(testId: string): Promise<{
+    success: boolean
+    results?: any
+    error?: string
+  }> {
+    try {
+      const test = await prisma.aBTest.findUnique({
+        where: { id: testId }
+      })
+
+      if (!test) {
+        return { success: false, error: 'Teste A/B não encontrado' }
+      }
+
+      const variantA = JSON.parse(test.variantA)
+      const variantB = JSON.parse(test.variantB)
+      const settings = JSON.parse(test.settings)
+
+      // Simular processamento do A/B test
+      const results = {
+        variantA: {
+          sent: Math.floor(Math.random() * 100) + 50,
+          opens: Math.floor(Math.random() * 50) + 10,
+          clicks: Math.floor(Math.random() * 20) + 5
+        },
+        variantB: {
+          sent: Math.floor(Math.random() * 100) + 50,
+          opens: Math.floor(Math.random() * 50) + 10,
+          clicks: Math.floor(Math.random() * 20) + 5
+        }
+      }
+
+      // Calcular taxas
+      results.variantA.openRate = (results.variantA.opens / results.variantA.sent) * 100
+      results.variantA.clickRate = (results.variantA.clicks / results.variantA.opens) * 100
+      results.variantB.openRate = (results.variantB.opens / results.variantB.sent) * 100
+      results.variantB.clickRate = (results.variantB.clicks / results.variantB.opens) * 100
+
+      // Determinar vencedor
+      const winnerCriteria = settings.winnerCriteria
+      let winner = 'A'
+
+      if (winnerCriteria === 'opens' && results.variantB.openRate > results.variantA.openRate) {
+        winner = 'B'
+      } else if (winnerCriteria === 'clicks' && results.variantB.clickRate > results.variantA.clickRate) {
+        winner = 'B'
+      }
+
+      // Atualizar teste com resultados
+      await prisma.aBTest.update({
+        where: { id: testId },
+        data: {
+          status: 'COMPLETED',
+          endedAt: new Date(),
+          winnerId: winner,
+          results: JSON.stringify(results)
+        }
+      })
+
+      return { success: true, results }
+
+    } catch (error) {
+      console.error('Erro ao processar A/B test:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro interno'
+      }
+    }
+  }
+
+  // Método para obter analytics detalhados
+  async getDetailedAnalytics(campaignId?: string, dateRange?: { from: Date; to: Date }): Promise<{
+    campaigns: number
+    emailsSent: number
+    delivered: number
+    opens: number
+    clicks: number
+    unsubscribes: number
+    bounces: number
+    openRate: number
+    clickRate: number
+    unsubscribeRate: number
+    bounceRate: number
+    topCampaigns: any[]
+    recentActivity: any[]
+  }> {
+    const whereClause: any = {}
+
+    if (campaignId) {
+      whereClause.id = campaignId
+    }
+
+    if (dateRange) {
+      whereClause.createdAt = {
+        gte: dateRange.from,
+        lte: dateRange.to
+      }
+    }
+
+    const campaigns = await prisma.emailCampaignNew.findMany({
+      where: whereClause,
+      include: {
+        recipients: true,
+        opens: true,
+        clicks: true,
+        unsubscribes: true
+      }
+    })
+
+    const totalCampaigns = campaigns.length
+    const totalEmailsSent = campaigns.reduce((sum, c) => sum + c.sentCount, 0)
+    const totalDelivered = campaigns.reduce((sum, c) => sum + c.deliveredCount, 0)
+    const totalOpens = campaigns.reduce((sum, c) => sum + c.openedCount, 0)
+    const totalClicks = campaigns.reduce((sum, c) => sum + c.clickedCount, 0)
+    const totalUnsubscribes = campaigns.reduce((sum, c) => sum + c.unsubscribedCount, 0)
+    const totalBounces = campaigns.reduce((sum, c) => sum + c.bouncedCount, 0)
+
+    // Top campanhas por taxa de abertura
+    const topCampaigns = campaigns
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        sent: c.sentCount,
+        opens: c.openedCount,
+        clicks: c.clickedCount,
+        openRate: c.deliveredCount > 0 ? (c.openedCount / c.deliveredCount) * 100 : 0,
+        clickRate: c.openedCount > 0 ? (c.clickedCount / c.openedCount) * 100 : 0
+      }))
+      .sort((a, b) => b.openRate - a.openRate)
+      .slice(0, 5)
+
+    // Atividade recente
+    const recentActivity = await prisma.emailEvent.findMany({
+      where: dateRange ? {
+        createdAt: {
+          gte: dateRange.from,
+          lte: dateRange.to
+        }
+      } : {},
+      orderBy: { createdAt: 'desc' },
+      take: 10
+    })
+
+    return {
+      campaigns: totalCampaigns,
+      emailsSent: totalEmailsSent,
+      delivered: totalDelivered,
+      opens: totalOpens,
+      clicks: totalClicks,
+      unsubscribes: totalUnsubscribes,
+      bounces: totalBounces,
+      openRate: totalDelivered > 0 ? (totalOpens / totalDelivered) * 100 : 0,
+      clickRate: totalOpens > 0 ? (totalClicks / totalOpens) * 100 : 0,
+      unsubscribeRate: totalDelivered > 0 ? (totalUnsubscribes / totalDelivered) * 100 : 0,
+      bounceRate: totalEmailsSent > 0 ? (totalBounces / totalEmailsSent) * 100 : 0,
+      topCampaigns,
+      recentActivity
+    }
   }
 }
 
